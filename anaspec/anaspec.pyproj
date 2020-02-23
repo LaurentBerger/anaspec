@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>13d62a4b-fb30-4ce0-819c-34f0bfb5216a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>interface.py</StartupFile>
+    <StartupFile>anaspec.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -23,6 +23,9 @@
   <ItemGroup>
     <Compile Include="anaspec.py" />
     <Compile Include="fenetrecourbe.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="fluxaudio.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="interface.py">
