@@ -18,18 +18,58 @@ class InterfaceAnalyseur(wx.Panel):
         self.SetSizer(sizer)
         self.ctrl = []
         self.ajouter_page_acquisition()
+        self.ajouter_page_tfd("Fourier")
         self.nb.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
-        frame = wx.Frame(None, -1, 'Mes Courbes',style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
+        frame = wx.Frame(None, -1, 'Mes Courbes',
+                         style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
         plotter = fc.PlotNotebook(frame, 
                                   self.flux_audio,
                                   evt_type=self.EVT_SOME_NEW_EVENT)
-        page1 = plotter.add('figure 1')
+        page1 = plotter.add('Time Signal', type_courbe='time')
+        page2 = plotter.add('Spectral', type_courbe='dft_modulus')
         self.flux_audio.courbe = plotter
         frame.Show()
 
     def close_page(self, evt):
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
         evt.Veto()
+
+    def ajouter_page_tfd(self, name="Sampling"):
+        ctrl = []
+        page = wx.Panel(self.nb)
+        font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
+        ma_grille = wx.GridSizer(rows=3, cols=2, vgap=5, hgap=5)
+        bouton = wx.Button(page, id=1000, label='Enable plot spectrum')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.OnFourier, bouton)
+        self.ajouter_bouton((bouton,0), ctrl, ma_grille, font)
+
+        st = wx.StaticText(page, label="")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+ 
+        st = wx.StaticText(page, label="Low frequency (Hz)")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.Slider(page, id=2001, value=0, minValue=0,
+                       maxValue=self.flux_audio.Fe/2,
+                       style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
+                       name="LowFrequency")
+        self.ajouter_bouton((st,1), ctrl, ma_grille, font)
+
+        st = wx.StaticText(page, label="High frequency (Hz)")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.Slider(page, id=2002, value=0, minValue=0,
+                       maxValue=self.flux_audio.Fe/2,
+                       style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
+                       name="HighFrequency")
+        self.ajouter_bouton((st,1), ctrl, ma_grille, font)
+
+
+        page.SetSizerAndFit(ma_grille)
+        self.nb.AddPage(page, name)
+        self.ctrl.append(ctrl)
+
 
     def ajouter_page_acquisition(self, name="Sampling"):
         ctrl = []
@@ -69,7 +109,7 @@ class InterfaceAnalyseur(wx.Panel):
     def ajouter_bouton(self, bt, ctrl, ma_grille, font):
         bt[0].SetFont(font)
         ctrl.append(bt)
-        ma_grille.Add(bt[0])
+        ma_grille.Add(bt[0],0, wx.EXPAND)
 
     def set_frequency(self):
         s = self.ctrl[0][3][0].GetValue()
@@ -92,6 +132,19 @@ class InterfaceAnalyseur(wx.Panel):
         s = self.ctrl[0][5][0].GetValue()
         duration = int(s)
         self.duration = -1
+
+    def OnFourier(self, event):
+
+        bouton = event.GetEventObject()
+        s = bouton.GetLabel()
+        couleur =  bouton.GetBackgroundColour()
+        if couleur[1] == 255:
+            bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
+            bouton.SetLabel("Disable plot spectrum")
+        else:
+            bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+            bouton.SetLabel("Enable plot spectrum")
+
 
     def OnStartStop(self, event):
 

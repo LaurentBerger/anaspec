@@ -14,9 +14,10 @@ class Plot(wx.Panel):
     """
     Fenetage wx contenant un graphique matplotlib
     """
-    def __init__(self, parent, fa, id=-1):
+    def __init__(self, parent, fa, id=-1, type_courbe='time'):
         wx.Panel.__init__(self, parent, id=id)
         self.fa = fa
+        self.type_courbe = type_courbe
         self.parent = parent
         self.figure, self.ax = plt.subplots()
         self.lines = None
@@ -42,7 +43,11 @@ class Plot(wx.Panel):
         self.lines = self.ax.plot(self.fa.plotdata)
         self.ax.legend(['channel {}'.format(c) for c in range(self.fa.nb_canaux)],
                        loc='lower left', ncol=self.fa.nb_canaux)
-        self.ax.axis((0, len(self.fa.plotdata)/self.fa.nb_canaux, -1, 1))
+        if self.type_courbe == 'time':
+            self.ax.axis((0, len(self.fa.plotdata)/self.fa.nb_canaux, -1, 1))
+        elif self.type_courbe == 'dft_modulus':
+            freq = np.fft.fftfreq(self.fa.nb_ech_fenetre)*self.fa.Fe
+            self.ax.axis((0, self.fa.nb_ech_fenetre//2, 0, len(self.fa.plotdata)))
 
 
     def draw_page(self):
@@ -57,10 +62,15 @@ class Plot(wx.Panel):
             shift = len(data)
             self.fa.plotdata = np.roll(self.fa.plotdata, -shift, axis=0)
             self.fa.plotdata[-shift:, :] = data
-        for column, line in enumerate(self.lines):
-            line.set_ydata((column+1) *self.fa.plotdata[:, column])
-        return self.lines
-
+        if self.type_courbe == 'time':
+            for column, line in enumerate(self.lines):
+                line.set_ydata((column+1) *self.fa.plotdata[:, column])
+            return self.lines
+        elif self.type_courbe == 'dft_modulus':
+            S =  np.abs(np.fft.fft(self.fa.plotdata[0:self.fa.nb_ech_fenetre, 0])).real
+            self.ax.axis((0, self.fa.Fe/2, 0, 1))
+            p = S[0:self.fa.nb_ech_fenetre//2+1]
+            self.lines[0].set_ydata(p)
 
 class PlotNotebook(wx.Panel):
     def __init__(self, parent, fa, id=-1, evt_type=None):
@@ -75,10 +85,10 @@ class PlotNotebook(wx.Panel):
         self.Bind(evt_type, self.draw_page)
         self.clock = 0
 
-    def add(self, name="plot"):
+    def add(self, name="plot", type_courbe='time'):
         """ Ajout d'un onglet au panel
         """
-        page = Plot(self.nb, self.fa)
+        page = Plot(self.nb, self.fa, type_courbe=type_courbe)
         self.page.append(page)
         self.nb.AddPage(page, name)
         self.nb.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
