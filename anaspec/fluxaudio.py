@@ -28,7 +28,8 @@ class FluxAudio:
         self.duration = -1
         self.plotdata = None
         self.mapping = None
-
+        self.k_min = 0
+        self.k_max = fenetre//2+1
 
     def init_data_courbe(self):
         length = int(self.nb_ech_fenetre)

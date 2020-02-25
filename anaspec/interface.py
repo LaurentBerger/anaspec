@@ -54,21 +54,38 @@ class InterfaceAnalyseur(wx.Panel):
                        maxValue=self.flux_audio.Fe/2,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="LowFrequency")
-        self.ajouter_bouton((st,1), ctrl, ma_grille, font)
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        st.Bind(wx.EVT_SCROLL, self.change_fmin, st,2001)
 
         st = wx.StaticText(page, label="High frequency (Hz)")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
-        st = wx.Slider(page, id=2002, value=0, minValue=0,
+        st = wx.Slider(page, id=2002, value=self.flux_audio.Fe/2, minValue=0,
                        maxValue=self.flux_audio.Fe/2,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="HighFrequency")
-        self.ajouter_bouton((st,1), ctrl, ma_grille, font)
-
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        st.Bind(wx.EVT_SCROLL, self.change_fmax, st,2002)
 
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
         self.ctrl.append(ctrl)
+
+    def change_fmax(self, e):
+
+        obj = e.GetEventObject()
+        val = obj.GetValue()
+
+        self.flux_audio.k_max = int(val / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
+        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
+
+    def change_fmin(self, e):
+
+        obj = e.GetEventObject()
+        val = obj.GetValue()
+
+        self.flux_audio.k_min = int(val / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
+        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
 
 
     def ajouter_page_acquisition(self, name="Sampling"):
@@ -141,9 +158,11 @@ class InterfaceAnalyseur(wx.Panel):
         if couleur[1] == 255:
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             bouton.SetLabel("Disable plot spectrum")
+            self.flux_audio.courbe.page[1].courbe_active = True
         else:
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.SetLabel("Enable plot spectrum")
+            self.flux_audio.courbe.page[1].courbe_active = False
 
 
     def OnStartStop(self, event):
@@ -156,11 +175,13 @@ class InterfaceAnalyseur(wx.Panel):
             self.set_time_length()
             self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
             self.flux_audio.open()
+            self.flux_audio.courbe.page[0].courbe_active = True
             bouton.SetLabel("Stop")
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             self.figer_parametre(True)
         else:
             self.flux_audio.close()
+            self.flux_audio.courbe.page[0].courbe_active = False
             bouton.SetLabel("Start")
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             self.figer_parametre(False)

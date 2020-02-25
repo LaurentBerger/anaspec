@@ -18,6 +18,7 @@ class Plot(wx.Panel):
         wx.Panel.__init__(self, parent, id=id)
         self.fa = fa
         self.type_courbe = type_courbe
+        self.courbe_active = False
         self.parent = parent
         self.figure, self.ax = plt.subplots()
         self.lines = None
@@ -27,7 +28,8 @@ class Plot(wx.Panel):
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
-
+        self.auto_adjust  = True
+        self.max_module = self.fa.nb_ech_fenetre / self.fa.Fe
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.EXPAND)
         sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
@@ -41,13 +43,17 @@ class Plot(wx.Panel):
                 l.remove()
         self.figure.gca().set_prop_cycle(None)
         self.lines = self.ax.plot(self.fa.plotdata)
-        self.ax.legend(['channel {}'.format(c) for c in range(self.fa.nb_canaux)],
-                       loc='lower left', ncol=self.fa.nb_canaux)
         if self.type_courbe == 'time':
             self.ax.axis((0, len(self.fa.plotdata)/self.fa.nb_canaux, -1, 1))
+            self.ax.legend(['channel {}'.format(c) for c in range(self.fa.nb_canaux)],
+                           loc='lower left', ncol=self.fa.nb_canaux)
         elif self.type_courbe == 'dft_modulus':
-            freq = np.fft.fftfreq(self.fa.nb_ech_fenetre)*self.fa.Fe
-            self.ax.axis((0, self.fa.nb_ech_fenetre//2, 0, len(self.fa.plotdata)))
+            self.ax.axis((self.fa.k_min*self.fa.Fe/self.fa.nb_ech_fenetre,
+                          self.fa.k_max*self.fa.Fe/self.fa.nb_ech_fenetre,
+                          0,
+                          self.max_module))
+            self.ax.legend(['channel {}'.format(c) for c in range(self.fa.nb_canaux)],
+                           loc='upper right', ncol=self.fa.nb_canaux)
 
 
     def draw_page(self):
@@ -66,11 +72,20 @@ class Plot(wx.Panel):
             for column, line in enumerate(self.lines):
                 line.set_ydata((column+1) *self.fa.plotdata[:, column])
             return self.lines
-        elif self.type_courbe == 'dft_modulus':
-            S =  np.abs(np.fft.fft(self.fa.plotdata[0:self.fa.nb_ech_fenetre, 0])).real
-            self.ax.axis((0, self.fa.Fe/2, 0, 1))
-            p = S[0:self.fa.nb_ech_fenetre//2+1]
-            self.lines[0].set_ydata(p)
+        elif self.courbe_active and self.type_courbe == 'dft_modulus':
+            if self.auto_adjust:
+                self.max_module = -1
+            for column, line in enumerate(self.lines):
+                S =  np.abs(np.fft.fft(self.fa.plotdata[0:self.fa.nb_ech_fenetre, column])).real / self.fa.Fe
+                if self.auto_adjust:
+                    m = np.max(S)
+                    if m > self.max_module:
+                        self.max_module = m
+                p = S[self.fa.k_min:self.fa.k_max]
+                line.set_xdata(np.arange(self.fa.k_min,self.fa.k_max)*self.fa.Fe/self.fa.nb_ech_fenetre)
+                line.set_ydata(p)
+            self.auto_adjust = False
+            return self.lines
 
 class PlotNotebook(wx.Panel):
     def __init__(self, parent, fa, id=-1, evt_type=None):
@@ -105,7 +120,7 @@ class PlotNotebook(wx.Panel):
             return
         self.clock = time.clock()
         for page in self.page:
-            if self.nb.GetCurrentPage() == page:
+            if page.courbe_active:
                 page.draw_page()
                 page.canvas.draw()
 
