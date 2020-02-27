@@ -64,8 +64,10 @@ def audio_callback(indata, _frames, _time, status):
         print(status, file=sys.stderr)
     # Copie des données dans la file:
     flux_audio.q.put(indata[:, flux_audio.mapping])
-    # Création d'un événement
-    evt = new_event(attr1="audio_callback", attr2=0)
-    # Envoi de l'événement à la fenêtre chargée du tracé
-    wx.PostEvent(flux_audio.courbe, evt)
+    if flux_audio.courbe.evt_process:
+        # Création d'un événement
+        flux_audio.courbe.evt_process = False
+        evt = new_event(attr1="audio_callback", attr2=0)
+        # Envoi de l'événement à la fenêtre chargée du tracé
+        wx.PostEvent(flux_audio.courbe, evt)
 

@@ -27,6 +27,7 @@ class InterfaceAnalyseur(wx.Panel):
                                   evt_type=self.EVT_SOME_NEW_EVENT)
         page1 = plotter.add('Time Signal', type_courbe='time')
         page2 = plotter.add('Spectral', type_courbe='dft_modulus')
+        page3 = plotter.add('Spectrogram', type_courbe='spectrogram')
         self.flux_audio.courbe = plotter
         frame.Show()
 
