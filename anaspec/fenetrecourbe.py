@@ -41,6 +41,7 @@ class Plot(wx.Panel):
         sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
         self.SetSizer(sizer)
         self.b = 1
+        self.tps = 0
 
     def etendue_axe(self):
         if self.fa.plotdata is None:
@@ -67,17 +68,32 @@ class Plot(wx.Panel):
             self.ax.legend(['channel {}'.format(c) for c in range(self.fa.nb_canaux)],
                            loc='upper right', ncol=self.fa.nb_canaux)
         elif self.type_courbe == 'spectrogram':
+            """
+            img = np.zeros((100,10),np.float32)
+            if self.tps >= img.shape[0]:
+                self.tps = 0
+            img[self.tps, :] = 1
+            #self.ax.axis((0, 1.0, 0, 22000.0))
+            self.image = self.ax.imshow(img, origin = 'bottom', aspect = 'auto')
+            """       
             f, t, Sxx = signal.spectrogram(
                 self.fa.plotdata[0:self.fa.nb_ech_fenetre, 0],
                 self.fa.Fe,
                 nperseg=self.fa.nb_ech_fenetre//16,
                 noverlap=self.fa.nb_ech_fenetre//128)
-            self.ax.axis((0,
-                          self.fa.nb_ech_fenetre/self.fa.Fe,
-                          0,
-                          self.fa.Fe/2))
-            self.image = self.ax.imshow(Sxx, extent=[0,max(t),0,max(f)], aspect='auto')
+            t = t[0:t.shape[0]:max(1,t.shape[0]//4)]
+            cols = np.arange(0,Sxx.shape[1],max(1,Sxx.shape[1]//4))
+            labels = ["{:.2e}".format(x) for x in t]
+            self.ax.set_xticks(cols, minor=False)
+            self.ax.set_xticklabels(labels, fontdict=None, minor=False)
 
+            f = f[0:f.shape[0]:max(1,f.shape[0]//4)]
+            rows = np.arange(0,Sxx.shape[0],max(1,Sxx.shape[0]//4))
+            labels = [str(x) for x in f]
+            self.ax.set_yticks(rows, minor=False)
+            self.ax.set_yticklabels(labels, fontdict=None, minor=False)
+            Sxx[0,0]= 1 / self.fa.Fe
+            self.image = self.ax.imshow(Sxx, origin = 'bottom', aspect = 'auto')
 
     def draw_page(self):
         """Tracer de la fenêtre en fonction
@@ -117,7 +133,7 @@ class Plot(wx.Panel):
                 self.fa.Fe,
                 nperseg=self.fa.nb_ech_fenetre//16,
                 noverlap=self.fa.nb_ech_fenetre//128)
-            s =Sxx
+
             #self.image = self.ax.imshow(Sxx, extent=[0,max(t),0,max(f)], aspect='auto')
             self.image.set_data(Sxx)
             self.b = 1-self.b
