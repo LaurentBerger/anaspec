@@ -17,8 +17,11 @@ class InterfaceAnalyseur(wx.Panel):
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.ctrl = []
+        self.dico_label={0:('Enable','Disable',0)}
+        self.ind_page = 0
         self.ajouter_page_acquisition()
         self.ajouter_page_tfd("Fourier")
+        self.ajouter_page_spectrogram("Spectrogram")
         self.nb.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
         frame = wx.Frame(None, -1, 'Mes Courbes',
                          style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
@@ -40,9 +43,10 @@ class InterfaceAnalyseur(wx.Panel):
         page = wx.Panel(self.nb)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
         ma_grille = wx.GridSizer(rows=3, cols=2, vgap=5, hgap=5)
-        bouton = wx.Button(page, id=1000, label='Enable plot spectrum')
+        self.dico_label[2000]= ('Enable plot spectrum','Disable plot spectrum',self.ind_page)
+        bouton = wx.Button(page, id=2000, label='Enable plot spectrum')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
-        bouton.Bind(wx.EVT_BUTTON, self.OnFourier, bouton)
+        bouton.Bind(wx.EVT_BUTTON, self.OnEnableGraphic, bouton)
         self.ajouter_bouton((bouton,0), ctrl, ma_grille, font)
 
         st = wx.StaticText(page, label="")
@@ -71,6 +75,8 @@ class InterfaceAnalyseur(wx.Panel):
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
         self.ctrl.append(ctrl)
+        self.ind_page =  self.ind_page + 1
+
 
     def change_fmax(self, e):
 
@@ -94,6 +100,7 @@ class InterfaceAnalyseur(wx.Panel):
         page = wx.Panel(self.nb)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
         ma_grille = wx.GridSizer(rows=4, cols=2, vgap=5, hgap=5)
+        self.dico_label[1000]= ('Start','Stop')
         bouton = wx.Button(page, id=1000, label='Start')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
         bouton.Bind(wx.EVT_BUTTON, self.OnStartStop, bouton)
@@ -123,6 +130,47 @@ class InterfaceAnalyseur(wx.Panel):
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
         self.ctrl.append(ctrl)
+        self.ind_page = self.ind_page + 1
+
+    def ajouter_page_spectrogram(self, name="Spectrogram"):
+        ctrl = []
+        page = wx.Panel(self.nb)
+        font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
+        ma_grille = wx.GridSizer(rows=3, cols=2, vgap=5, hgap=5)
+        self.dico_label[3000]= ('Enable spectrogram','Disable spectrogram',self.ind_page)
+        bouton = wx.Button(page, id=3000, label='Enable spectrogram')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.OnEnableGraphic, bouton)
+        self.ajouter_bouton((bouton,0), ctrl, ma_grille, font)
+
+        st = wx.StaticText(page, label="")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+ 
+        st = wx.StaticText(page, label="Low frequency (Hz)")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.Slider(page, id=3001, value=0, minValue=0,
+                       maxValue=self.flux_audio.Fe/2,
+                       style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
+                       name="LowFrequency")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        st.Bind(wx.EVT_SCROLL, self.change_fmin, st,3001)
+
+        st = wx.StaticText(page, label="High frequency (Hz)")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.Slider(page, id=3002, value=self.flux_audio.Fe/2, minValue=0,
+                       maxValue=self.flux_audio.Fe/2,
+                       style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
+                       name="HighFrequency")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        st.Bind(wx.EVT_SCROLL, self.change_fmax, st,3002)
+
+        page.SetSizerAndFit(ma_grille)
+        self.nb.AddPage(page, name)
+        self.ctrl.append(ctrl)
+        self.ind_page =  self.ind_page + 1
+
 
     def ajouter_bouton(self, bt, ctrl, ma_grille, font):
         bt[0].SetFont(font)
@@ -151,19 +199,22 @@ class InterfaceAnalyseur(wx.Panel):
         duration = int(s)
         self.duration = -1
 
-    def OnFourier(self, event):
+    def OnEnableGraphic(self, event):
 
         bouton = event.GetEventObject()
-        s = bouton.GetLabel()
+        id = event.GetId()
+        if id not in self.dico_label:
+            return
         couleur =  bouton.GetBackgroundColour()
+        ind_page = self.dico_label[id][2]
         if couleur[1] == 255:
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
-            bouton.SetLabel("Disable plot spectrum")
-            self.flux_audio.courbe.page[1].courbe_active = True
+            bouton.SetLabel(self.dico_label[id][1])
+            self.flux_audio.courbe.page[ind_page].courbe_active = True
         else:
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
-            bouton.SetLabel("Enable plot spectrum")
-            self.flux_audio.courbe.page[1].courbe_active = False
+            bouton.SetLabel(self.dico_label[id][0])
+            self.flux_audio.courbe.page[ind_page].courbe_active = False
 
 
     def OnStartStop(self, event):
