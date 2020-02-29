@@ -34,8 +34,6 @@ class Plot(wx.Panel):
         self.auto_adjust  = True
         if type_courbe == 'time' or type_courbe == 'dft_modulus':
             self.max_module = self.fa.nb_ech_fenetre / self.fa.Fe
-        elif type_courbe == 'spectrogram':
-            self.courbe_active = True
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.EXPAND)
         sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)

@@ -136,7 +136,7 @@ class InterfaceAnalyseur(wx.Panel):
         ctrl = []
         page = wx.Panel(self.nb)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=3, cols=2, vgap=5, hgap=5)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=5, hgap=5)
         self.dico_label[3000]= ('Enable spectrogram','Disable spectrogram',self.ind_page)
         bouton = wx.Button(page, id=3000, label='Enable spectrogram')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
@@ -165,6 +165,24 @@ class InterfaceAnalyseur(wx.Panel):
                        name="HighFrequency")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
         st.Bind(wx.EVT_SCROLL, self.change_fmax, st,3002)
+
+        st = wx.StaticText(page, label="Window size")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.Slider(page, id=3003, value=self.flux_audio.nb_ech_fenetre // 2, minValue=0,
+                       maxValue=self.flux_audio.nb_ech_fenetre // 2,
+                       style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
+                       name="WindowSize")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.StaticText(page, label="Overlap")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.Slider(page, id=3004, value=self.flux_audio.nb_ech_fenetre // 4, minValue=0,
+                       maxValue=self.flux_audio.nb_ech_fenetre // 4,
+                       style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
+                       name="Overlap")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
