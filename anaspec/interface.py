@@ -18,6 +18,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.SetSizer(sizer)
         self.ctrl = []
         self.dico_label={0:('Enable','Disable',0)}
+        self.dico_slider={0:None}
         self.ind_page = 0
         self.ajouter_page_acquisition()
         self.ajouter_page_tfd("Fourier")
@@ -60,7 +61,8 @@ class InterfaceAnalyseur(wx.Panel):
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="LowFrequency")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
-        st.Bind(wx.EVT_SCROLL, self.change_fmin, st,2001)
+        st.Bind(wx.EVT_SCROLL, self.change_slider, st,2001)
+        self.dico_label[2001] = self.flux_audio.set_k_min
 
         st = wx.StaticText(page, label="High frequency (Hz)")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
@@ -70,7 +72,8 @@ class InterfaceAnalyseur(wx.Panel):
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="HighFrequency")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
-        st.Bind(wx.EVT_SCROLL, self.change_fmax, st,2002)
+        st.Bind(wx.EVT_SCROLL, self.change_slider, st,2002)
+        self.dico_label[2002] = self.flux_audio.set_k_max
 
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
@@ -78,21 +81,17 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page =  self.ind_page + 1
 
 
-    def change_fmax(self, e):
+    def change_slider(self, event):
 
-        obj = e.GetEventObject()
+        obj = event.GetEventObject()
         val = obj.GetValue()
+        id = event.GetId()
+        if id not in self.dico_slider:
+            return
+        self.dico_slider[id](val)
 
-        self.flux_audio.k_max = int(val / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
         self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
 
-    def change_fmin(self, e):
-
-        obj = e.GetEventObject()
-        val = obj.GetValue()
-
-        self.flux_audio.k_min = int(val / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
 
 
     def ajouter_page_acquisition(self, name="Sampling"):
@@ -149,39 +148,45 @@ class InterfaceAnalyseur(wx.Panel):
         st = wx.StaticText(page, label="Low frequency (Hz)")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
-        st = wx.Slider(page, id=3001, value=0, minValue=0,
+        st = wx.Slider(page, id=3001, value=self.flux_audio.f_min_spectro, minValue=0,
                        maxValue=self.flux_audio.Fe/2,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="LowFrequency")
+        self.dico_label[3001] = self.flux_audio.set_f_min_spectro
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
-        st.Bind(wx.EVT_SCROLL, self.change_fmin, st,3001)
+        st.Bind(wx.EVT_SCROLL, self.change_slider, st,3001)
 
         st = wx.StaticText(page, label="High frequency (Hz)")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
-        st = wx.Slider(page, id=3002, value=self.flux_audio.Fe/2, minValue=0,
+        st = wx.Slider(page, id=3002, value=self.flux_audio.f_max_spectro, minValue=0,
                        maxValue=self.flux_audio.Fe/2,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="HighFrequency")
+        self.dico_label[3002] = self.flux_audio.set_f_max_spectro
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
-        st.Bind(wx.EVT_SCROLL, self.change_fmax, st,3002)
+        st.Bind(wx.EVT_SCROLL, self.change_slider, st,3002)
 
         st = wx.StaticText(page, label="Window size")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
-        st = wx.Slider(page, id=3003, value=self.flux_audio.nb_ech_fenetre // 2, minValue=0,
-                       maxValue=self.flux_audio.nb_ech_fenetre // 2,
+        st = wx.Slider(page, id=3003, value=self.flux_audio.win_size_spectro, minValue=0,
+                       maxValue=self.flux_audio.nb_ech_fenetre,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="WindowSize")
+        st.Bind(wx.EVT_SCROLL, self.change_slider, st,3003)
+        self.dico_label[3003] = self.flux_audio.set_win_size_spectro
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
         st = wx.StaticText(page, label="Overlap")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
-        st = wx.Slider(page, id=3004, value=self.flux_audio.nb_ech_fenetre // 4, minValue=0,
+        st = wx.Slider(page, id=3004, value=self.flux_audio.overlap_spectro, minValue=0,
                        maxValue=self.flux_audio.nb_ech_fenetre // 4,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="Overlap")
+        self.dico_label[3004] = self.flux_audio.set_overlap_spectro
+        st.Bind(wx.EVT_SCROLL, self.change_slider, st,3004)
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
         page.SetSizerAndFit(ma_grille)

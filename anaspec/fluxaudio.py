@@ -30,6 +30,34 @@ class FluxAudio:
         self.mapping = None
         self.k_min = 0
         self.k_max = fenetre//2+1
+        self.f_min_spectro = 0
+        self.f_max_spectro = self.Fe // 2
+        self.win_size_spectro = self.nb_ech_fenetre // 2
+        self.overlap_spectro = self.nb_ech_fenetre // 16
+
+    def set_k_min(self,v):
+        v = int(v / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
+        if v < self.k_max:
+            self.k_min = v
+
+    def set_k_max(self,v):
+        v = int(v / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
+        if v > self.k_min: 
+            self.k_max = v
+
+    def set_f_min_spectro(self,v):
+        if v < self.f_max_spectro:
+            self.f_min_spectro = v
+
+    def set_f_max_spectro(self,v):
+        if v > self.f_min_spectro:
+            self.f_max_spectro = v
+
+    def set_win_size_spectro(self,v):
+        self.win_size_spectro = v
+
+    def set_overlap_spectro(self,v):
+        self.overlap_spectro = v
 
     def init_data_courbe(self):
         length = int(self.nb_ech_fenetre)

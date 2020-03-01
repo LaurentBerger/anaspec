@@ -129,8 +129,8 @@ class Plot(wx.Panel):
             f, t, Sxx = signal.spectrogram(
                 self.fa.plotdata[0:self.fa.nb_ech_fenetre, 0],
                 self.fa.Fe,
-                nperseg=self.fa.nb_ech_fenetre//16,
-                noverlap=self.fa.nb_ech_fenetre//128)
+                nperseg=self.fa.win_size_spectro,
+                noverlap=self.fa.overlap_spectro)
 
             #self.image = self.ax.imshow(Sxx, extent=[0,max(t),0,max(f)], aspect='auto')
             self.image.set_data(Sxx)
