@@ -80,20 +80,6 @@ class InterfaceAnalyseur(wx.Panel):
         self.ctrl.append(ctrl)
         self.ind_page =  self.ind_page + 1
 
-
-    def change_slider(self, event):
-
-        obj = event.GetEventObject()
-        val = obj.GetValue()
-        id = event.GetId()
-        if id not in self.dico_slider:
-            return
-        self.dico_slider[id](val)
-
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
-
-
-
     def ajouter_page_acquisition(self, name="Sampling"):
         ctrl = []
         page = wx.Panel(self.nb)
@@ -135,7 +121,7 @@ class InterfaceAnalyseur(wx.Panel):
         ctrl = []
         page = wx.Panel(self.nb)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=5, hgap=5)
+        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=5, hgap=5)
         self.dico_label[3000]= ('Enable spectrogram','Disable spectrogram',self.ind_page)
         bouton = wx.Button(page, id=3000, label='Enable spectrogram')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
@@ -189,16 +175,33 @@ class InterfaceAnalyseur(wx.Panel):
         st.Bind(wx.EVT_SCROLL, self.change_slider, st,3004)
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
+        st = wx.StaticText(page, label="Window")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        type_window = ['boxcar', 'triang', 'blackman', 'hamming', 'hann',
+                       'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris',
+                       'nuttall', 'barthann', 'kaiser', 'gaussian','general_gaussian',
+                       'slepian', 'dpss', 'chebwin', 'exponential', 'tukey']
+        st = wx.ComboBox(page,id=3005, choices=type_window)
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font, wx.Centre)
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.ind_page =  self.ind_page + 1
 
+    def change_slider(self, event):
+        obj = event.GetEventObject()
+        val = obj.GetValue()
+        id = event.GetId()
+        if id not in self.dico_slider:
+            return
+        self.dico_slider[id](val)
+        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
 
-    def ajouter_bouton(self, bt, ctrl, ma_grille, font):
+
+    def ajouter_bouton(self, bt, ctrl, ma_grille, font, option=wx.EXPAND):
         bt[0].SetFont(font)
         ctrl.append(bt)
-        ma_grille.Add(bt[0],0, wx.EXPAND)
+        ma_grille.Add(bt[0],0, option)
 
     def set_frequency(self):
         s = self.ctrl[0][3][0].GetValue()
