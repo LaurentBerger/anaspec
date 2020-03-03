@@ -35,6 +35,10 @@ class FluxAudio:
         self.win_size_spectro = self.nb_ech_fenetre // 2
         self.overlap_spectro = self.nb_ech_fenetre // 16
 
+    def get_device(self):
+        s = sd.query_devices()
+        return s
+
     def set_k_min(self,v):
         v = int(v / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
         if v < self.k_max:

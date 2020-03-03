@@ -11,8 +11,9 @@ class InterfaceAnalyseur(wx.Panel):
                                   aui.AUI_NB_TAB_MOVE | aui.AUI_NB_MIDDLE_CLICK_CLOSE)
         
         self.new_event, self.EVT_SOME_NEW_EVENT = wx.lib.newevent.NewEvent()
+        self.parent = parent
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
-
+        self.install_menu()
         sizer = wx.BoxSizer()
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -34,6 +35,27 @@ class InterfaceAnalyseur(wx.Panel):
         page3 = plotter.add('Spectrogram', type_courbe='spectrogram')
         self.flux_audio.courbe = plotter
         frame.Show()
+
+    def install_menu(self):
+        liste_periph = self.flux_audio.get_device()
+        article_periph_in = [x['name'] for x in liste_periph if x['max_input_channels'] >= 1]
+        article_periph_out = [x['name'] for x in liste_periph if x['max_output_channels'] >= 1]
+        barre_menu = wx.MenuBar()
+        menu_fichier = wx.Menu()
+        article_quitter = menu_fichier.Append(wx.ID_EXIT, 'Quit', "exit program")
+        barre_menu.Append(menu_fichier, '&File')
+        menu_file = wx.Menu()
+        menu_periph_in = wx.Menu()
+        [menu_periph_in.Append(idx+200,x) for idx,x in enumerate(article_periph_in)]
+        barre_menu.Append(menu_periph_in,'input device')
+        menu_periph_out = wx.Menu()
+        [menu_periph_out.Append(idx+300,x) for idx,x in enumerate(article_periph_in)]
+        barre_menu.Append(menu_periph_out,'output device')
+        menu_about = wx.Menu()
+        article_about = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
+        barre_menu.Append(menu_about, '&Help')
+        self.parent.SetMenuBar(barre_menu)
+
 
     def close_page(self, evt):
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
