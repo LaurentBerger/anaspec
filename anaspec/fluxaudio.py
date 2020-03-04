@@ -78,12 +78,18 @@ class FluxAudio:
         self.duration = -1
 
 
-    def open(self):
+    def open(self, device_idx):
         self.init_data_courbe()
-        self.stream = sd.InputStream(
-            device=None, channels=self.nb_canaux-1,
-            samplerate=self.Fe, callback=audio_callback)
+        print(device_idx)
+        try:
+
+            self.stream = sd.InputStream(
+                device=device_idx, channels=self.nb_canaux-1,
+                samplerate=self.Fe, callback=audio_callback)
+        except Exception as e:
+            return False
         self.stream.start()
+        return True
 
     def close(self):
         self.stream.stop()

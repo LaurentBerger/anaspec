@@ -12,8 +12,42 @@ class InterfaceAnalyseur(wx.Panel):
         
         self.new_event, self.EVT_SOME_NEW_EVENT = wx.lib.newevent.NewEvent()
         self.parent = parent
+        self.idmenu_audio_in = {-1:-1}
+        self.idmenu_audio_out = {-1:-1}
+        self.idx_periph_in = None
+        self.idx_periph_out = None
+
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
         self.install_menu()
+        self.parent.Show()
+
+    def select_audio_in(self,event):
+        obj = event.GetEventObject()
+        if self.idx_periph_in is None:
+            self.interface_acquisition()
+        l = obj.GetMenuItems()
+        for art in l:
+            art.Check(False)
+        id = event.GetId()
+        obj.Check(id,True)
+        nom_periph_in = obj.GetLabel(id)
+        if nom_periph_in in self.idmenu_audio_in:
+            self.idx_periph_in = self.idmenu_audio_in[nom_periph_in]
+
+    def disable_item_check(self):
+        barre_menu = self.parent.GetMenuBar()
+        menu = barre_menu.GetMenu(1)
+        l = menu.GetMenuItems()
+        for art in l:
+            art.Check(False)
+            if self.idmenu_audio_in[art.GetItemLabelText()] == self.idx_periph_in:
+                art.Enable(False)
+        
+
+    def select_audio_out(self,event):
+        self.interface_acquisition()
+
+    def interface_acquisition(self):
         sizer = wx.BoxSizer()
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -25,6 +59,8 @@ class InterfaceAnalyseur(wx.Panel):
         self.ajouter_page_tfd("Fourier")
         self.ajouter_page_spectrogram("Spectrogram")
         self.nb.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
+        self.nb.Refresh(True)
+        self.nb.SetSize(self.parent.GetClientSize())
         frame = wx.Frame(None, -1, 'Mes Courbes',
                          style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
         plotter = fc.PlotNotebook(frame, 
@@ -37,25 +73,29 @@ class InterfaceAnalyseur(wx.Panel):
         frame.Show()
 
     def install_menu(self):
-        liste_periph = self.flux_audio.get_device()
-        article_periph_in = [x['name'] for x in liste_periph if x['max_input_channels'] >= 1]
-        article_periph_out = [x['name'] for x in liste_periph if x['max_output_channels'] >= 1]
+        self.liste_periph = self.flux_audio.get_device()
+        self.idmenu_audio_in = {-1:-1}
+        self.idmenu_audio_in = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_input_channels'] >= 1}
+        self.idmenu_audio_out = {-1:-1}
+        self.idmenu_audio_out = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_output_channels'] >= 1}
         barre_menu = wx.MenuBar()
         menu_fichier = wx.Menu()
         article_quitter = menu_fichier.Append(wx.ID_EXIT, 'Quit', "exit program")
         barre_menu.Append(menu_fichier, '&File')
         menu_file = wx.Menu()
         menu_periph_in = wx.Menu()
-        [menu_periph_in.Append(idx+200,x) for idx,x in enumerate(article_periph_in)]
+        self.idmenu_perih = {-1:-1}
+        [menu_periph_in.AppendCheckItem(idx+200,x) for idx,x in enumerate(self.idmenu_audio_in)]
         barre_menu.Append(menu_periph_in,'input device')
         menu_periph_out = wx.Menu()
-        [menu_periph_out.Append(idx+300,x) for idx,x in enumerate(article_periph_in)]
+        [menu_periph_out.AppendCheckItem(idx+300,x) for idx,x in enumerate(self.idmenu_audio_out)]
         barre_menu.Append(menu_periph_out,'output device')
         menu_about = wx.Menu()
         article_about = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
         barre_menu.Append(menu_about, '&Help')
         self.parent.SetMenuBar(barre_menu)
-
+        self.parent.Bind(wx.EVT_MENU, self.select_audio_in,id=200,id2=299)
+        self.parent.Bind(wx.EVT_MENU, self.select_audio_out,id=300,id2=399)
 
     def close_page(self, evt):
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
@@ -267,6 +307,8 @@ class InterfaceAnalyseur(wx.Panel):
 
     def OnStartStop(self, event):
 
+        if self.idmenu_audio_in is None:
+            wx.MessageBox("You must select an audio in device", "Warning", wx.ICON_WARNING)
         bouton = event.GetEventObject()
         s = bouton.GetLabel()
         if s == "Start":
@@ -274,7 +316,10 @@ class InterfaceAnalyseur(wx.Panel):
             self.set_window_size()
             self.set_time_length()
             self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
-            self.flux_audio.open()
+            if not self.flux_audio.open(self.idx_periph_in):
+                self.disable_item_check()
+                wx.MessageBox("Cannot opened input device : input disable", "Error", wx.ICON_WARNING)
+                return
             self.flux_audio.courbe.page[0].courbe_active = True
             bouton.SetLabel("Stop")
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))

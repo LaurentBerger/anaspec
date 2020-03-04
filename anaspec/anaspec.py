@@ -20,8 +20,5 @@ interface_audio = interface.InterfaceAnalyseur(frame)
 frame.Show()
 print(sd.query_devices())
 device = None
-device_info = sd.query_devices(None, 'input')
-Fe = device_info['default_samplerate']
-#    fa.open()
 
 application.MainLoop()
