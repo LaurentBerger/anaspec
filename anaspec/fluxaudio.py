@@ -40,12 +40,12 @@ class FluxAudio:
         return s
 
     def set_k_min(self,v):
-        v = int(v / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
+        v = int(v / self.Fe * self.nb_ech_fenetre)
         if v < self.k_max:
             self.k_min = v
 
     def set_k_max(self,v):
-        v = int(v / self.flux_audio.Fe * self.flux_audio.nb_ech_fenetre)
+        v = int(v / self.Fe * self.nb_ech_fenetre)
         if v > self.k_min: 
             self.k_max = v
 

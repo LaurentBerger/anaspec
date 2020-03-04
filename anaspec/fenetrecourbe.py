@@ -84,14 +84,16 @@ class Plot(wx.Panel):
             labels = ["{:.2e}".format(x) for x in t]
             self.ax.set_xticks(cols, minor=False)
             self.ax.set_xticklabels(labels, fontdict=None, minor=False)
+            ind_min = np.argmin(abs(f-self.fa.f_min_spectro))
+            ind_max = np.argmin(abs(f-self.fa.f_max_spectro))
 
-            f = f[0:f.shape[0]:max(1,f.shape[0]//4)]
-            rows = np.arange(0,Sxx.shape[0],max(1,Sxx.shape[0]//4))
-            labels = [str(x) for x in f]
+            f = f[ind_min:ind_max:max(1,(ind_max - ind_min) // 4)]
+            rows = np.arange(ind_min,ind_max,max(1,(ind_max - ind_min) // 4))
+            labels = ["{:.0f}".format(x) for x in f]
             self.ax.set_yticks(rows, minor=False)
             self.ax.set_yticklabels(labels, fontdict=None, minor=False)
             Sxx[0,0]= 1 / self.fa.Fe
-            self.image = self.ax.imshow(Sxx, origin = 'bottom', aspect = 'auto')
+            self.image = self.ax.imshow(Sxx[ind_min:ind_max], origin = 'bottom', aspect = 'auto')
 
     def draw_page(self):
         """Tracer de la fenêtre en fonction
