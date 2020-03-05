@@ -84,16 +84,19 @@ class Plot(wx.Panel):
             labels = ["{:.2e}".format(x) for x in t]
             self.ax.set_xticks(cols, minor=False)
             self.ax.set_xticklabels(labels, fontdict=None, minor=False)
-            ind_min = np.argmin(abs(f-self.fa.f_min_spectro))
-            ind_max = np.argmin(abs(f-self.fa.f_max_spectro))
+            self.freq_ind_min = np.argmin(abs(f-self.fa.f_min_spectro))
+            self.freq_ind_max = np.argmin(abs(f-self.fa.f_max_spectro))
 
-            f = f[ind_min:ind_max:max(1,(ind_max - ind_min) // 4)]
-            rows = np.arange(ind_min,ind_max,max(1,(ind_max - ind_min) // 4))
+            f = f[self.freq_ind_min:self.freq_ind_max:
+                  max(1,(self.freq_ind_max - self.freq_ind_min) // 4)]
+            rows = np.arange(self.freq_ind_min,
+                             self.freq_ind_max,
+                             max(1,(self.freq_ind_max - self.freq_ind_min) // 4))
             labels = ["{:.0f}".format(x) for x in f]
             self.ax.set_yticks(rows, minor=False)
             self.ax.set_yticklabels(labels, fontdict=None, minor=False)
             Sxx[0,0]= 1 / self.fa.Fe
-            self.image = self.ax.imshow(Sxx[ind_min:ind_max], origin = 'bottom', aspect = 'auto')
+            self.image = self.ax.imshow(Sxx[self.freq_ind_min:self.freq_ind_max,:], origin = 'bottom', aspect = 'auto')
 
     def draw_page(self):
         """Tracer de la fenêtre en fonction
@@ -135,7 +138,7 @@ class Plot(wx.Panel):
                 noverlap=self.fa.overlap_spectro)
 
             #self.image = self.ax.imshow(Sxx, extent=[0,max(t),0,max(f)], aspect='auto')
-            self.image.set_data(Sxx)
+            self.image.set_data(Sxx[self.freq_ind_min:self.freq_ind_max,:])
             self.b = 1-self.b
             return self.image
 
@@ -150,6 +153,7 @@ class PlotNotebook(wx.Panel):
         self.evt_process = True
         self.SetSizer(sizer)
         self.parent = parent
+        self.clock = time.clock()
         self.Bind(evt_type, self.draw_page)
         self.clock = 0
 
@@ -168,10 +172,11 @@ class PlotNotebook(wx.Panel):
 
     def draw_page(self, _evt):
         """ tracé de la courbe associé à l'onglet
-        if time.clock() - self.clock < self.fa.tps_refresh:
-            return
         """
 
+        if time.clock() - self.clock < 3*self.fa.tps_refresh:
+            self.evt_process = True
+            return
         self.clock = time.clock()
         for page in self.page:
             if page.courbe_active:

@@ -230,7 +230,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
 
         st = wx.Slider(page, id=3004, value=self.flux_audio.overlap_spectro, minValue=0,
-                       maxValue=self.flux_audio.nb_ech_fenetre // 4,
+                       maxValue=self.flux_audio.nb_ech_fenetre-1,
                        style=wx.SL_HORIZONTAL|wx.SL_LABELS|wx.SL_MIN_MAX_LABELS,
                        name="Overlap")
         self.dico_slider[3004] = self.flux_audio.set_overlap_spectro
@@ -258,6 +258,20 @@ class InterfaceAnalyseur(wx.Panel):
             return
         self.dico_slider[id](val)
         self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
+
+    def update_spectro_interface(self):
+        low = wx.Window.FindWindowById(3001)
+        if low:
+            low.SetMax(self.flux_audio.Fe/2)
+        high = wx.Window.FindWindowById(3002)
+        if high:
+            high.SetMax(self.flux_audio.Fe/2)
+        win_size = wx.Window.FindWindowById(3003)
+        if win_size:
+            win_size.SetMax(self.flux_audio.nb_ech_fenetre)
+        overlap = wx.Window.FindWindowById(3004)
+        if overlap:
+            overlap.SetMax(self.flux_audio.nb_ech_fenetre-1)
 
 
     def ajouter_bouton(self, bt, ctrl, ma_grille, font, option=wx.EXPAND):
@@ -296,6 +310,7 @@ class InterfaceAnalyseur(wx.Panel):
         couleur =  bouton.GetBackgroundColour()
         ind_page = self.dico_label[id][2]
         if couleur[1] == 255:
+            self.update_spectro_interface()
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             bouton.SetLabel(self.dico_label[id][1])
             self.flux_audio.courbe.page[ind_page].courbe_active = True
@@ -320,6 +335,7 @@ class InterfaceAnalyseur(wx.Panel):
                 self.disable_item_check()
                 wx.MessageBox("Cannot opened input device : input disable", "Error", wx.ICON_WARNING)
                 return
+            self.update_spectro_interface()
             self.flux_audio.courbe.page[0].courbe_active = True
             bouton.SetLabel("Stop")
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
