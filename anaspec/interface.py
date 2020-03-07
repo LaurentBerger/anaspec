@@ -1,3 +1,10 @@
+"""
+Interface de l'analyseur :
+réglages des paramètres d'acquisition
+pour la tfd, sélection de la bande de fréquence pour l'affichage
+pour le spectrogramme, sélection de la bande de fréquence, du nombre
+d'échantillon, du recouvrement, du type de fenêtrage
+"""
 import os
 import wx
 import wx.lib.agw.aui as aui
@@ -5,7 +12,22 @@ import fluxaudio
 import fenetrecourbe as fc
 
 class InterfaceAnalyseur(wx.Panel):
+    """
+    onglets pour les réglages de l'acquisition,
+    pour les réglages de l'affichage de la tfd,
+    pour les réglages de l'affichage du spectrogramme
+    """
     def __init__(self, parent, id=-1):
+        """
+        membre :
+        parent : fenêtre parent
+        idmenu_audio_in  : dictionnaire idmenu audio-in vers index du périphérique audion dans liste des devices
+        idmenu_audio_out : dictionnaire idmenu audio-out vers index du périphérique audion dans liste des device
+        idx_periph_in : indice du périphérique d'entré sélectionné dans liste des device
+        idx_periph_out : indice du périphérique de sortie sélectionné dans liste des device
+        dico_slider : dictionnaire idslider vers fonction modifiant la valeur 
+        flux_audio : périphérique audio en entrée ouvert
+        """
         wx.Panel.__init__(self, parent, id=id)
         self.nb = aui.AuiNotebook(self, style=aui.AUI_NB_TOP | aui.AUI_NB_TAB_SPLIT |
                                   aui.AUI_NB_TAB_MOVE | aui.AUI_NB_MIDDLE_CLICK_CLOSE)
@@ -22,29 +44,43 @@ class InterfaceAnalyseur(wx.Panel):
         self.parent.Show()
 
     def select_audio_in(self,event):
+        """
+        fonction appelée lorsqu'un périphérique 
+        est sélectionné dans le menu audio_in :
+        activation de l'interface d'acquisition et
+        ajout d'une marque sur l'article sélectionné
+        """
         obj = event.GetEventObject()
         if self.idx_periph_in is None:
             self.interface_acquisition()
-        l = obj.GetMenuItems()
-        for art in l:
-            art.Check(False)
+        self.disable_item_check(1)
         id = event.GetId()
         obj.Check(id,True)
         nom_periph_in = obj.GetLabel(id)
         if nom_periph_in in self.idmenu_audio_in:
             self.idx_periph_in = self.idmenu_audio_in[nom_periph_in]
 
-    def disable_item_check(self):
+    def disable_item_check(self, indexe=1):
+        """
+        enlève les marques du menu en position
+        indexe dans la barre de menu
+        """
         barre_menu = self.parent.GetMenuBar()
-        menu = barre_menu.GetMenu(1)
+        menu = barre_menu.GetMenu(indexe)
         l = menu.GetMenuItems()
         for art in l:
             art.Check(False)
-            if self.idmenu_audio_in[art.GetItemLabelText()] == self.idx_periph_in:
-                art.Enable(False)
+#            if self.idmenu_xaudio_in[art.GetItemLabelText()] == self.idx_periph_in:
+#                art.Enable(False)
         
 
     def select_audio_out(self,event):
+        """
+        fonction appelée lorsqu'un périphérique 
+        est sélectionné dans le menu audio_out :
+        activation de l'interface d'acquisition et
+        ajout d'une marque sur l'article sélectionné
+        """
         pass
 
     def interface_acquisition(self):
