@@ -9,7 +9,6 @@ class InterfaceAnalyseur(wx.Panel):
         wx.Panel.__init__(self, parent, id=id)
         self.nb = aui.AuiNotebook(self, style=aui.AUI_NB_TOP | aui.AUI_NB_TAB_SPLIT |
                                   aui.AUI_NB_TAB_MOVE | aui.AUI_NB_MIDDLE_CLICK_CLOSE)
-        
         self.new_event, self.EVT_SOME_NEW_EVENT = wx.lib.newevent.NewEvent()
         self.parent = parent
         self.idmenu_audio_in = {-1:-1}
@@ -42,9 +41,8 @@ class InterfaceAnalyseur(wx.Panel):
             art.Check(False)
             if self.idmenu_audio_in[art.GetItemLabelText()] == self.idx_periph_in:
                 art.Enable(False)
-        
 
-    def select_audio_out(self,event):
+    def select_audio_out(self, event):
         pass
 
     def interface_acquisition(self):
@@ -52,8 +50,8 @@ class InterfaceAnalyseur(wx.Panel):
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.ctrl = []
-        self.dico_label={0:('Enable','Disable',0)}
-        self.dico_slider={0:None}
+        self.dico_label = {0:('Enable', 'Disable', 0)}
+        self.dico_slider = {0:None}
         self.ind_page = 0
         self.ajouter_page_acquisition()
         self.ajouter_page_tfd("Fourier")
@@ -63,7 +61,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.nb.SetSize(self.parent.GetClientSize())
         frame = wx.Frame(None, -1, 'Mes Courbes',
                          style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
-        plotter = fc.PlotNotebook(frame, 
+        plotter = fc.PlotNotebook(frame,
                                   self.flux_audio,
                                   evt_type=self.EVT_SOME_NEW_EVENT)
         page1 = plotter.add('Time Signal', type_courbe='time')
@@ -75,7 +73,9 @@ class InterfaceAnalyseur(wx.Panel):
     def install_menu(self):
         self.liste_periph = self.flux_audio.get_device()
         self.idmenu_audio_in = {-1:-1}
-        self.idmenu_audio_in = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_input_channels'] >= 1}
+        self.idmenu_audio_in = {x['name']:idx 
+                                for idx,x in enumerate(self.liste_periph) 
+                                if x['max_input_channels'] >= 1}
         self.idmenu_audio_out = {-1:-1}
         self.idmenu_audio_out = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_output_channels'] >= 1}
         barre_menu = wx.MenuBar()

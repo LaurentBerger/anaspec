@@ -31,14 +31,13 @@ class Plot(wx.Panel):
         self.canvas = FigureCanvas(self, -1, self.figure)
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
-        self.auto_adjust  = True
+        self.auto_adjust = True
         if type_courbe == 'time' or type_courbe == 'dft_modulus':
             self.max_module = self.fa.nb_ech_fenetre / self.fa.Fe
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.EXPAND)
         sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
         self.SetSizer(sizer)
-        self.b = 1
         self.tps = 0
 
     def etendue_axe(self):
@@ -73,14 +72,14 @@ class Plot(wx.Panel):
             img[self.tps, :] = 1
             #self.ax.axis((0, 1.0, 0, 22000.0))
             self.image = self.ax.imshow(img, origin = 'bottom', aspect = 'auto')
-            """       
+            """
             f, t, Sxx = signal.spectrogram(
                 self.fa.plotdata[0:self.fa.nb_ech_fenetre, 0],
                 self.fa.Fe,
                 nperseg=self.fa.nb_ech_fenetre//16,
                 noverlap=self.fa.nb_ech_fenetre//128)
-            t = t[0:t.shape[0]:max(1,t.shape[0]//4)]
-            cols = np.arange(0,Sxx.shape[1],max(1,Sxx.shape[1]//4))
+            t = t[0:t.shape[0]:max(1, t.shape[0]//4)]
+            cols = np.arange(0, Sxx.shape[1], max(1, Sxx.shape[1]//4))
             labels = ["{:.2e}".format(x) for x in t]
             self.ax.set_xticks(cols, minor=False)
             self.ax.set_xticklabels(labels, fontdict=None, minor=False)
@@ -88,15 +87,17 @@ class Plot(wx.Panel):
             self.freq_ind_max = np.argmin(abs(f-self.fa.f_max_spectro))
 
             f = f[self.freq_ind_min:self.freq_ind_max:
-                  max(1,(self.freq_ind_max - self.freq_ind_min) // 4)]
+                  max(1, (self.freq_ind_max - self.freq_ind_min) // 4)]
             rows = np.arange(self.freq_ind_min,
                              self.freq_ind_max,
-                             max(1,(self.freq_ind_max - self.freq_ind_min) // 4))
+                             max(1, (self.freq_ind_max - self.freq_ind_min) // 4))
             labels = ["{:.0f}".format(x) for x in f]
             self.ax.set_yticks(rows, minor=False)
             self.ax.set_yticklabels(labels, fontdict=None, minor=False)
-            Sxx[0,0]= 1 / self.fa.Fe
-            self.image = self.ax.imshow(Sxx[self.freq_ind_min:self.freq_ind_max,:], origin = 'bottom', aspect = 'auto')
+            Sxx[0, 0] = 1 / self.fa.Fe
+            self.image = self.ax.imshow(Sxx[self.freq_ind_min:self.freq_ind_max, :],
+                                        origin='bottom',
+                                        aspect='auto')
 
     def draw_page(self):
         """Tracer de la fenêtre en fonction
@@ -120,13 +121,13 @@ class Plot(wx.Panel):
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                S =  np.abs(np.fft.fft(self.fa.plotdata[0:self.fa.nb_ech_fenetre, column])).real / self.fa.Fe
+                S = np.abs(np.fft.fft(self.fa.plotdata[0:self.fa.nb_ech_fenetre, column])).real / self.fa.Fe
                 if self.auto_adjust:
                     m = np.max(S)
                     if m > self.max_module:
                         self.max_module = m
                 p = S[self.fa.k_min:self.fa.k_max]
-                line.set_xdata(np.arange(self.fa.k_min,self.fa.k_max)*self.fa.Fe/self.fa.nb_ech_fenetre)
+                line.set_xdata(np.arange(self.fa.k_min, self.fa.k_max)*self.fa.Fe / self.fa.nb_ech_fenetre)
                 line.set_ydata(p)
             self.auto_adjust = False
             return self.lines
@@ -138,8 +139,7 @@ class Plot(wx.Panel):
                 noverlap=self.fa.overlap_spectro)
 
             #self.image = self.ax.imshow(Sxx, extent=[0,max(t),0,max(f)], aspect='auto')
-            self.image.set_data(Sxx[self.freq_ind_min:self.freq_ind_max,:])
-            self.b = 1-self.b
+            self.image.set_data(Sxx[self.freq_ind_min:self.freq_ind_max, :])
             return self.image
 
 class PlotNotebook(wx.Panel):

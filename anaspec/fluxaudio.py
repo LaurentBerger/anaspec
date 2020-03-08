@@ -13,7 +13,7 @@ class FluxAudio:
     """
     flux audio et ensemble des paramètres associés
     """
-    def __init__(self, n_evt,  freq=44100, fenetre=2048, canaux=2):
+    def __init__(self, n_evt, freq=44100, fenetre=2048, canaux=2):
         global new_event
         global flux_audio
         flux_audio = self
@@ -39,17 +39,17 @@ class FluxAudio:
         s = sd.query_devices()
         return s
 
-    def set_k_min(self,v):
+    def set_k_min(self, v):
         v = int(v / self.Fe * self.nb_ech_fenetre)
         if v < self.k_max:
             self.k_min = v
 
-    def set_k_max(self,v):
+    def set_k_max(self, v):
         v = int(v / self.Fe * self.nb_ech_fenetre)
-        if v > self.k_min: 
+        if v > self.k_min:
             self.k_max = v
 
-    def set_f_min_spectro(self,v):
+    def set_f_min_spectro(self, v):
         if v < self.f_max_spectro:
             self.f_min_spectro = v
 
@@ -108,4 +108,3 @@ def audio_callback(indata, _frames, _time, status):
         evt = new_event(attr1="audio_callback", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
         wx.PostEvent(flux_audio.courbe, evt)
-
