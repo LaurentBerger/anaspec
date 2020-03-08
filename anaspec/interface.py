@@ -1,3 +1,10 @@
+"""
+Interface de l'analyseur :
+réglages des paramètres d'acquisition
+pour la tfd, sélection de la bande de fréquence pour l'affichage
+pour le spectrogramme, sélection de la bande de fréquence, du nombre
+d'échantillon, du recouvrement, du type de fenêtrage
+"""
 import os
 import wx
 import wx.lib.agw.aui as aui
@@ -5,10 +12,26 @@ import fluxaudio
 import fenetrecourbe as fc
 
 class InterfaceAnalyseur(wx.Panel):
+    """
+    onglets pour les réglages de l'acquisition,
+    pour les réglages de l'affichage de la tfd,
+    pour les réglages de l'affichage du spectrogramme
+    """
     def __init__(self, parent, id=-1):
+        """
+        membre :
+        parent : fenêtre parent
+        idmenu_audio_in  : dictionnaire idmenu audio-in vers index du périphérique audion dans liste des devices
+        idmenu_audio_out : dictionnaire idmenu audio-out vers index du périphérique audion dans liste des device
+        idx_periph_in : indice du périphérique d'entré sélectionné dans liste des device
+        idx_periph_out : indice du périphérique de sortie sélectionné dans liste des device
+        dico_slider : dictionnaire idslider vers fonction modifiant la valeur 
+        flux_audio : périphérique audio en entrée ouvert
+        """
         wx.Panel.__init__(self, parent, id=id)
         self.nb = aui.AuiNotebook(self, style=aui.AUI_NB_TOP | aui.AUI_NB_TAB_SPLIT |
                                   aui.AUI_NB_TAB_MOVE | aui.AUI_NB_MIDDLE_CLICK_CLOSE)
+        
         self.new_event, self.EVT_SOME_NEW_EVENT = wx.lib.newevent.NewEvent()
         self.parent = parent
         self.idmenu_audio_in = {-1:-1}
@@ -21,28 +44,43 @@ class InterfaceAnalyseur(wx.Panel):
         self.parent.Show()
 
     def select_audio_in(self,event):
+        """
+        fonction appelée lorsqu'un périphérique 
+        est sélectionné dans le menu audio_in :
+        activation de l'interface d'acquisition et
+        ajout d'une marque sur l'article sélectionné
+        """
         obj = event.GetEventObject()
         if self.idx_periph_in is None:
             self.interface_acquisition()
-        l = obj.GetMenuItems()
-        for art in l:
-            art.Check(False)
+        self.disable_item_check(1)
         id = event.GetId()
         obj.Check(id,True)
         nom_periph_in = obj.GetLabel(id)
         if nom_periph_in in self.idmenu_audio_in:
             self.idx_periph_in = self.idmenu_audio_in[nom_periph_in]
 
-    def disable_item_check(self):
+    def disable_item_check(self, indexe=1):
+        """
+        enlève les marques du menu en position
+        indexe dans la barre de menu
+        """
         barre_menu = self.parent.GetMenuBar()
-        menu = barre_menu.GetMenu(1)
+        menu = barre_menu.GetMenu(indexe)
         l = menu.GetMenuItems()
         for art in l:
             art.Check(False)
-            if self.idmenu_audio_in[art.GetItemLabelText()] == self.idx_periph_in:
-                art.Enable(False)
+#            if self.idmenu_xaudio_in[art.GetItemLabelText()] == self.idx_periph_in:
+#                art.Enable(False)
+        
 
-    def select_audio_out(self, event):
+    def select_audio_out(self,event):
+        """
+        fonction appelée lorsqu'un périphérique 
+        est sélectionné dans le menu audio_out :
+        activation de l'interface d'acquisition et
+        ajout d'une marque sur l'article sélectionné
+        """
         pass
 
     def interface_acquisition(self):
@@ -50,8 +88,8 @@ class InterfaceAnalyseur(wx.Panel):
         sizer.Add(self.nb, 1, wx.EXPAND)
         self.SetSizer(sizer)
         self.ctrl = []
-        self.dico_label = {0:('Enable', 'Disable', 0)}
-        self.dico_slider = {0:None}
+        self.dico_label={0:('Enable','Disable',0)}
+        self.dico_slider={0:None}
         self.ind_page = 0
         self.ajouter_page_acquisition()
         self.ajouter_page_tfd("Fourier")
@@ -61,7 +99,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.nb.SetSize(self.parent.GetClientSize())
         frame = wx.Frame(None, -1, 'Mes Courbes',
                          style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
-        plotter = fc.PlotNotebook(frame,
+        plotter = fc.PlotNotebook(frame, 
                                   self.flux_audio,
                                   evt_type=self.EVT_SOME_NEW_EVENT)
         page1 = plotter.add('Time Signal', type_courbe='time')
@@ -73,9 +111,7 @@ class InterfaceAnalyseur(wx.Panel):
     def install_menu(self):
         self.liste_periph = self.flux_audio.get_device()
         self.idmenu_audio_in = {-1:-1}
-        self.idmenu_audio_in = {x['name']:idx 
-                                for idx,x in enumerate(self.liste_periph) 
-                                if x['max_input_channels'] >= 1}
+        self.idmenu_audio_in = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_input_channels'] >= 1}
         self.idmenu_audio_out = {-1:-1}
         self.idmenu_audio_out = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_output_channels'] >= 1}
         barre_menu = wx.MenuBar()
