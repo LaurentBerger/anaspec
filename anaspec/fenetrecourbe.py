@@ -76,8 +76,9 @@ class Plot(wx.Panel):
             f, t, Sxx = signal.spectrogram(
                 self.fa.plotdata[0:self.fa.nb_ech_fenetre, 0],
                 self.fa.Fe,
-                nperseg=self.fa.nb_ech_fenetre//16,
-                noverlap=self.fa.nb_ech_fenetre//128)
+                window = (self.fa.type_window),
+                nperseg=self.fa.win_size_spectro,
+                noverlap=self.fa.overlap_spectro)
             t = t[0:t.shape[0]:max(1, t.shape[0]//4)]
             cols = np.arange(0, Sxx.shape[1], max(1, Sxx.shape[1]//4))
             labels = ["{:.2e}".format(x) for x in t]
@@ -139,7 +140,8 @@ class Plot(wx.Panel):
                 noverlap=self.fa.overlap_spectro)
 
             #self.image = self.ax.imshow(Sxx, extent=[0,max(t),0,max(f)], aspect='auto')
-            self.image.set_data(Sxx[self.freq_ind_min:self.freq_ind_max, :])
+            psd = Sxx[self.freq_ind_min:self.freq_ind_max, :]
+            self.image.set_data(psd)
             return self.image
 
 class PlotNotebook(wx.Panel):

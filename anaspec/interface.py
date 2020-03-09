@@ -42,6 +42,11 @@ class InterfaceAnalyseur(wx.Panel):
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
         self.install_menu()
         self.parent.Show()
+        self.type_window = ['boxcar', 'triang', 'blackman', 'hamming', 'hann',
+                            'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris',
+                            'nuttall', 'barthann', 'kaiser', 'gaussian','general_gaussian',
+                            'slepian', 'dpss', 'chebwin', 'exponential', 'tukey']
+        self.flux_audio.type_window = self.type_window[0]
 
     def select_audio_in(self,event):
         """
@@ -106,6 +111,7 @@ class InterfaceAnalyseur(wx.Panel):
         page2 = plotter.add('Spectral', type_courbe='dft_modulus')
         page3 = plotter.add('Spectrogram', type_courbe='spectrogram')
         self.flux_audio.courbe = plotter
+
         frame.Show()
 
     def install_menu(self):
@@ -275,16 +281,21 @@ class InterfaceAnalyseur(wx.Panel):
 
         st = wx.StaticText(page, label="Window")
         self.ajouter_bouton((st,0), ctrl, ma_grille, font)
-        type_window = ['boxcar', 'triang', 'blackman', 'hamming', 'hann',
-                       'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris',
-                       'nuttall', 'barthann', 'kaiser', 'gaussian','general_gaussian',
-                       'slepian', 'dpss', 'chebwin', 'exponential', 'tukey']
-        st = wx.ComboBox(page,id=3005, choices=type_window)
+        st = wx.ComboBox(page,id=3005, choices=self.type_window)
         self.ajouter_bouton((st,0), ctrl, ma_grille, font, wx.Centre)
+        st.SetSelection(self.type_window.index(self.flux_audio.type_window)+1)
+        st.Bind(wx.EVT_COMBOBOX, self.change_fenetrage, st,3005)
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.ind_page =  self.ind_page + 1
+
+    def change_fenetrage(self, event):
+        id = event.GetId()
+        obj = event.GetEventObject()
+        val = obj.GetValue()
+        if id == 3005:
+            self.flux_audio.type_window =  val
 
     def change_slider(self, event):
         obj = event.GetEventObject()
