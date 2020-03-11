@@ -55,6 +55,26 @@ class InterfaceAnalyseur(wx.Panel):
                             'bartlett', 'flattop', 'parzen', 'bohman', 'blackmanharris',
                             'nuttall', 'barthann', 'kaiser', 'gaussian','general_gaussian',
                             'slepian', 'dpss', 'chebwin', 'exponential', 'tukey']
+        self.dico_window = {'boxcar':(None),
+                            'triang':(None),
+                            'blackman':(None),
+                            'hamming':(None),
+                            'hann':(None),
+                            'bartlett':(None),
+                            'flattop':(None),
+                            'parzen':(None),
+                            'bohman':(None),
+                            'blackmanharris':(None),
+                            'nuttall':(None),
+                            'barthann':(None),
+                            'kaiser':('beta'),
+                            'gaussian':('std'),
+                            'general_gaussian':('p','sig'),
+                            'slepian':('bandwidth'),
+                            'dpss':('NW','Kmax','norm'),
+                            'chebwin':('at'),
+                            'exponential':('tau'),
+                            'tukey':('alpha')}
         self.flux_audio.type_window = self.type_window[0]
 
     def select_audio_in(self,event):
@@ -240,7 +260,7 @@ class InterfaceAnalyseur(wx.Panel):
         ctrl = []
         page = wx.Panel(self.nb)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=5, hgap=5)
+        ma_grille = wx.GridSizer(rows=9, cols=2, vgap=5, hgap=5)
         self.dico_label[3000]= ('Enable spectrogram','Disable spectrogram',self.ind_page)
         bouton = wx.Button(page, id=3000, label='Enable spectrogram')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
