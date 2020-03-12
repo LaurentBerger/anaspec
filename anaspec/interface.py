@@ -72,14 +72,14 @@ class InterfaceAnalyseur(wx.Panel):
                             'blackmanharris':(None),
                             'nuttall':(None),
                             'barthann':(None),
-                            'kaiser':('beta'),
-                            'gaussian':('std'),
-                            'general_gaussian':('p','sig'),
-                            'slepian':('bandwidth'),
-                            'dpss':('NW','Kmax','norm'),
-                            'chebwin':('at'),
-                            'exponential':('tau'),
-                            'tukey':('alpha')}
+                            'kaiser':('beta',None),
+                            'gaussian':('std',None),
+                            'general_gaussian':('p','sig',None),
+                            'slepian':('bandwidth',None),
+                            'dpss':('NW','Kmax','norm',None),
+                            'chebwin':('at',None),
+                            'exponential':('tau',None),
+                            'tukey':('alpha',None)}
         self.flux_audio.type_window = self.type_window[0]
 
     def select_audio_in(self,event):
@@ -371,7 +371,7 @@ class InterfaceAnalyseur(wx.Panel):
             fen = wx.Window.FindWindowById(i)
             fen.Enable(False)
             fen.Show(False)
-        if param[0] == None:
+        if param is None:
             return
         fen = wx.Window.FindWindowById(PARAM1_WINDOW_TYPE-1)
         if fen is not None:
