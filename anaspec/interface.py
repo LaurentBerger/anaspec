@@ -20,6 +20,11 @@ SLIDER_WINDOW_SIZE_SPECTRO = 3003
 SLIDER_OVERLAP_SPECTRO = 3004
 COMBO_WINDOW_TYPE = 3005
 
+PARAM1_WINDOW_TYPE = COMBO_WINDOW_TYPE + 2 
+PARAM2_WINDOW_TYPE = PARAM1_WINDOW_TYPE + 2
+
+
+
 class InterfaceAnalyseur(wx.Panel):
     """
     onglets pour les réglages de l'acquisition,
@@ -330,6 +335,21 @@ class InterfaceAnalyseur(wx.Panel):
         self.ajouter_bouton((st,0), ctrl, ma_grille, font, wx.Centre)
         st.SetSelection(self.type_window.index(self.flux_audio.type_window)+1)
         st.Bind(wx.EVT_COMBOBOX, self.change_fenetrage, st,COMBO_WINDOW_TYPE)
+
+        st = wx.StaticText(page,id=PARAM1_WINDOW_TYPE-1, label="")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        st = wx.TextCtrl(page,
+                         id=PARAM1_WINDOW_TYPE,
+                         value=str(self.flux_audio.Fe))
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
+        st = wx.StaticText(page,id=PARAM2_WINDOW_TYPE-1, label="")
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+        st = wx.TextCtrl(page,
+                         id=PARAM2_WINDOW_TYPE,
+                         value=str(self.flux_audio.Fe))
+        self.ajouter_bouton((st,0), ctrl, ma_grille, font)
+
         page.SetSizerAndFit(ma_grille)
         self.nb.AddPage(page, name)
         self.ctrl.append(ctrl)
@@ -341,6 +361,34 @@ class InterfaceAnalyseur(wx.Panel):
         val = obj.GetValue()
         if id == COMBO_WINDOW_TYPE:
             self.flux_audio.type_window =  val
+            self.change_param_window()
+
+    def change_param_window(self):
+        if not self.flux_audio.type_window in self.dico_window :
+            return
+        param = self.dico_window[self.flux_audio.type_window]
+        for i in range(PARAM1_WINDOW_TYPE-1,PARAM2_WINDOW_TYPE+1):
+            fen = wx.Window.FindWindowById(i)
+            fen.Enable(False)
+            fen.Show(False)
+        if param[0] == None:
+            return
+        fen = wx.Window.FindWindowById(PARAM1_WINDOW_TYPE-1)
+        if fen is not None:
+            for i in range(PARAM1_WINDOW_TYPE-1,PARAM1_WINDOW_TYPE+1):
+                fen = wx.Window.FindWindowById(i)
+                fen.Enable(True)
+                fen.Show(True)
+            fen.SetLabel(param[0])
+        if len(param) == 1:
+            return
+        fen = wx.Window.FindWindowById(PARAM2_WINDOW_TYPE-1)
+        if fen is not None:
+            for i in range(PARAM2_WINDOW_TYPE-1,PARAM2_WINDOW_TYPE+1):
+                fen = wx.Window.FindWindowById(i)
+                fen.Enable(True)
+                fen.Show(True)
+            fen.SetLabel(param[1])
 
     def change_slider(self, event):
         obj = event.GetEventObject()
