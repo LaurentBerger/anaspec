@@ -34,6 +34,8 @@ class InterfaceAnalyseur(wx.Panel):
         """
         membre :
         parent : fenêtre parent
+        note_book : contient les onglets signa, tfd et spectrogramme
+        new_event : évènement pour la gestion du temps réel
         idmenu_audio_in  : dictionnaire idmenu audio-in vers
         index du périphérique audion dans liste des devices
         idmenu_audio_out : dictionnaire idmenu audio-out vers
@@ -42,13 +44,15 @@ class InterfaceAnalyseur(wx.Panel):
         idx_periph_out : indice du périphérique de sortie sélectionné dans liste des device
         dico_slider : dictionnaire idslider vers fonction modifiant la valeur
         flux_audio : périphérique audio en entrée ouvert
+        type_window : fenêtre pour la tfd et le spectrogramme
+        dico_window : fenêtre et nombre de paramètre utilisée pour définir la fenêtre
         """
         wx.Panel.__init__(self, parent, id=id_fenetre)
         self.note_book = aui.AuiNotebook(self,
                                           style=aui.AUI_NB_TOP | aui.AUI_NB_TAB_SPLIT |
                                   aui.AUI_NB_TAB_MOVE | aui.AUI_NB_MIDDLE_CLICK_CLOSE)
 
-        self.new_event, self.EVT_SOME_NEW_EVENT = wx.lib.newevent.NewEvent()
+        self.new_event, self.id_evt = wx.lib.newevent.NewEvent()
         self.parent = parent
         self.idmenu_audio_in = {-1:-1}
         self.idmenu_audio_out = {-1:-1}
@@ -129,6 +133,10 @@ class InterfaceAnalyseur(wx.Panel):
         pass
 
     def interface_acquisition(self):
+        """
+        Mise en place de l'interface d'acquisition
+        pour le signal temporel, la tfd et le spectrogramme
+        """
         sizer = wx.BoxSizer()
         sizer.Add(self.note_book, 1, wx.EXPAND)
         self.SetSizer(sizer)
@@ -146,7 +154,7 @@ class InterfaceAnalyseur(wx.Panel):
                          style=wx.DEFAULT_FRAME_STYLE & (~wx.CLOSE_BOX) & (~wx.MAXIMIZE_BOX))
         plotter = fc.PlotNotebook(frame,
                                   self.flux_audio,
-                                  evt_type=self.EVT_SOME_NEW_EVENT)
+                                  evt_type=self.id_evt)
         _ = plotter.add('Time Signal', type_courbe='time')
         _ = plotter.add('Spectral', type_courbe='dft_modulus')
         _ = plotter.add('Spectrogram', type_courbe='spectrogram')
@@ -155,11 +163,16 @@ class InterfaceAnalyseur(wx.Panel):
         frame.Show()
 
     def install_menu(self):
+        """
+        Installation des menus
+        """
         self.liste_periph = self.flux_audio.get_device()
         self.idmenu_audio_in = {-1:-1}
-        self.idmenu_audio_in = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_input_channels'] >= 1}
+        self.idmenu_audio_in = {x['name']:idx for idx,x in enumerate(self.liste_periph)
+                                if x['max_input_channels'] >= 1}
         self.idmenu_audio_out = {-1:-1}
-        self.idmenu_audio_out = {x['name']:idx for idx,x in enumerate(self.liste_periph) if x['max_output_channels'] >= 1}
+        self.idmenu_audio_out = {x['name']:idx for idx,x in enumerate(self.liste_periph)
+                                 if x['max_output_channels'] >= 1}
         barre_menu = wx.MenuBar()
         menu_fichier = wx.Menu()
         _ = menu_fichier.Append(wx.ID_EXIT, 'Quit', "exit program")
@@ -167,10 +180,12 @@ class InterfaceAnalyseur(wx.Panel):
         _ = wx.Menu()
         menu_periph_in = wx.Menu()
         self.idmenu_perih = {-1:-1}
-        [menu_periph_in.AppendCheckItem(idx+200,x) for idx,x in enumerate(self.idmenu_audio_in)]
+        _ = [menu_periph_in.AppendCheckItem(idx+200,x)
+             for idx,x in enumerate(self.idmenu_audio_in)]
         barre_menu.Append(menu_periph_in,'input device')
         menu_periph_out = wx.Menu()
-        [menu_periph_out.AppendCheckItem(idx+300,x) for idx,x in enumerate(self.idmenu_audio_out)]
+        _ = [menu_periph_out.AppendCheckItem(idx+300,x)
+             for idx,x in enumerate(self.idmenu_audio_out)]
         barre_menu.Append(menu_periph_out,'output device')
         menu_about = wx.Menu()
         _ = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
@@ -180,10 +195,18 @@ class InterfaceAnalyseur(wx.Panel):
         self.parent.Bind(wx.EVT_MENU, self.select_audio_out,id=300,id2=399)
 
     def close_page(self, evt):
+        """
+        surchage de close pour interdire
+        la fermeture des onglets
+        """
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
         evt.Veto()
 
-    def ajouter_page_tfd(self, name="Sampling"):
+    def ajouter_page_tfd(self, name="Fourier"):
+        """
+        création de l'onglet Fourier
+        pour paramétrer la tfd
+        """
         ctrl = []
         page = wx.Panel(self.note_book)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
@@ -231,6 +254,10 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page =  self.ind_page + 1
 
     def ajouter_page_acquisition(self, name="Sampling"):
+        """
+        création de l'onglet Sampling
+        pour paramétrer l'acquisitions
+        """
         ctrl = []
         page = wx.Panel(self.note_book)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
@@ -268,6 +295,10 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page = self.ind_page + 1
 
     def ajouter_page_spectrogram(self, name="Spectrogram"):
+        """
+        création de l'onglet Spectrogram
+        pour paramétrer le spectrogramme
+        """
         ctrl = []
         page = wx.Panel(self.note_book)
         font = wx.Font(10, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_BOLD)
@@ -362,6 +393,9 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page =  self.ind_page + 1
 
     def change_fenetrage(self, event):
+        """
+        Changement du type de fenêtre pour la tfd
+        """
         id_fenetre = event.GetId()
         obj = event.GetEventObject()
         val = obj.GetValue()
@@ -370,6 +404,10 @@ class InterfaceAnalyseur(wx.Panel):
             self.change_param_window()
 
     def change_param_window(self):
+        """
+        Création des articles pour
+        régler les paramètres de la fenêtres
+        """
         if not self.flux_audio.type_window in self.dico_window :
             return
         param = self.dico_window[self.flux_audio.type_window]
@@ -397,6 +435,9 @@ class InterfaceAnalyseur(wx.Panel):
             fen.SetLabel(param[1])
 
     def change_slider(self, event):
+        """
+        réglage des glissiéres
+        """
         obj = event.GetEventObject()
         val = obj.GetValue()
         id_fenetre = event.GetId()
@@ -451,11 +492,19 @@ class InterfaceAnalyseur(wx.Panel):
         return None
 
     def set_time_length(self):
+        """
+        Modification de la durée d'acquisition
+        en utilisant l'article
+        """
         texte_article = self.ctrl[0][5][0].GetValue()
-        duration = int(texte_article)
-        self.duration = duration
+        self.duration = int(texte_article)
 
     def on_enable_graphic(self, event):
+        """
+        Gestion de la bascule graphique actif ou inactif
+        Modification de la durée d'acquisition
+        en utilisant l'article
+        """
 
         bouton = event.GetEventObject()
         id_fenetre = event.GetId()
@@ -476,7 +525,9 @@ class InterfaceAnalyseur(wx.Panel):
 
 
     def on_start_stop(self, event):
-
+        """
+        Défut/Fin de l'acquisition
+        """
         if self.idmenu_audio_in is None:
             wx.MessageBox("You must select an audio in device", "Warning", wx.ICON_WARNING)
         bouton = event.GetEventObject()
@@ -488,7 +539,9 @@ class InterfaceAnalyseur(wx.Panel):
             self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
             if not self.flux_audio.open(self.idx_periph_in):
                 self.disable_item_check()
-                wx.MessageBox("Cannot opened input device : input disable", "Error", wx.ICON_WARNING)
+                wx.MessageBox("Cannot opened input device : input disable",
+                              "Error",
+                              wx.ICON_WARNING)
                 return
             self.update_spectro_interface()
             self.update_tfd_interface()
@@ -504,6 +557,10 @@ class InterfaceAnalyseur(wx.Panel):
             self.figer_parametre(False)
 
     def figer_parametre(self, enable):
+        """
+        Figer les paramètres non modifiables
+        pendant l'acquisiion
+        """
         for liste_art in self.ctrl:
             for ctrl in liste_art:
                 if ctrl[1]:
