@@ -97,7 +97,7 @@ class Plot(wx.Panel):
             self.ax.set_yticklabels(labels, fontdict=None, minor=False)
             Sxx[0, 0] = 1 / self.fa.Fe
             self.image = self.ax.imshow(Sxx[self.freq_ind_min:self.freq_ind_max, :],
-                                        origin='bottom',
+                                        origin='lower',
                                         aspect='auto')
 
     def draw_page(self):
@@ -155,7 +155,8 @@ class PlotNotebook(wx.Panel):
         self.evt_process = True
         self.SetSizer(sizer)
         self.parent = parent
-        self.clock = time.clock()
+        self.clock = time.perf_counter()
+        self.clock = time.perf_counter()
         self.Bind(evt_type, self.draw_page)
         self.clock = 0
 
@@ -176,10 +177,10 @@ class PlotNotebook(wx.Panel):
         """ tracé de la courbe associé à l'onglet
         """
 
-        if time.clock() - self.clock < 3*self.fa.tps_refresh:
+        if time.perf_counter() - self.clock < 3*self.fa.tps_refresh:
             self.evt_process = True
             return
-        self.clock = time.clock()
+        self.clock = time.perf_counter()
         for page in self.page:
             if page.courbe_active:
                 page.draw_page()

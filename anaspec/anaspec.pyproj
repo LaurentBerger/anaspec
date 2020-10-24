@@ -25,6 +25,7 @@
     <Compile Include="fenetrecourbe.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="fft_local_demo.py" />
     <Compile Include="fluxaudio.py">
       <SubType>Code</SubType>
     </Compile>
