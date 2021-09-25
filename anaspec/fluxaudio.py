@@ -18,6 +18,8 @@ class FluxAudio:
         global flux_audio
         flux_audio = self
         new_event = n_evt
+        self.NB_BUFFER = 64
+        self.ind_buffer = 0
         self.nb_ech_fenetre = fenetre
         self.nb_canaux = canaux
         self.tps_refresh = 0.1
@@ -66,7 +68,7 @@ class FluxAudio:
 
     def init_data_courbe(self):
         length = int(self.nb_ech_fenetre)
-        self.plotdata = np.zeros((length, self.nb_canaux))
+        self.plotdata = np.zeros((self.NB_BUFFER * length, self.nb_canaux))
         self.mapping = [c-1  for c in range(self.nb_canaux)]  # Channel numbers start with 1
 
     def set_frequency(self, v):
@@ -88,6 +90,7 @@ class FluxAudio:
                 device=device_idx, channels=self.nb_canaux-1,
                 samplerate=self.Fe, callback=audio_callback)
         except Exception as e:
+            print(sys.exc_info())
             return False
         self.stream.start()
         return True

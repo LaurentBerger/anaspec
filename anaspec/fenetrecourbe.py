@@ -52,13 +52,13 @@ class Plot(wx.Panel):
         self.lines = None
         self.image = None
         if self.type_courbe == 'time':
-            self.lines = self.graphique.plot(self.flux_audio.plotdata)
-            self.graphique.axis((0, len(self.flux_audio.plotdata) / 
+            self.lines = self.graphique.plot(self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, :])
+            self.graphique.axis((0, len(self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, :]) / 
                                  self.flux_audio.nb_canaux, -1, 1))
             self.graphique.legend(['channel {}'.format(c) for c in range(self.flux_audio.nb_canaux)],
                            loc='lower left', ncol=self.flux_audio.nb_canaux)
         elif self.type_courbe == 'dft_modulus':
-            self.lines = self.graphique.plot(self.flux_audio.plotdata)
+            self.lines = self.graphique.plot(self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, :])
             self.graphique.axis((self.flux_audio.k_min*self.flux_audio.Fe /
                                  self.flux_audio.nb_ech_fenetre,
                                  self.flux_audio.k_max*self.flux_audio.Fe /
@@ -70,7 +70,7 @@ class Plot(wx.Panel):
                                    loc='upper right', ncol=self.flux_audio.nb_canaux)
         elif self.type_courbe == 'spectrogram':
             freq, temps, sxx = signal.spectrogram(
-                self.flux_audio.plotdata[0:self.flux_audio.nb_ech_fenetre, 0],
+                self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, 0],
                 self.flux_audio.Fe,
                 window = (self.flux_audio.type_window),
                 nperseg=self.flux_audio.win_size_spectro,
@@ -102,37 +102,45 @@ class Plot(wx.Panel):
         """
         while True:
             try:
+                # https://docs.python.org/3/library/queue.html#queue.Queue.get_nowait
                 data = self.flux_audio.q.get_nowait()
             except queue.Empty:
                 break
             shift = len(data)
-            self.flux_audio.plotdata = np.roll(self.flux_audio.plotdata, -shift, axis=0)
-            self.flux_audio.plotdata[-shift:, :] = data
+            # print("data shape :", data.shape)
+            # print("plotdata shape :", self.flux_audio.plotdata.shape)
+            if shift<self.flux_audio.plotdata.shape[0]:
+                self.flux_audio.plotdata = np.roll(self.flux_audio.plotdata, -shift, axis=0)
+                self.flux_audio.plotdata[-shift:, :] = data
+            else:
+                return None
         if not self.courbe_active:
             return None
         if self.type_courbe == 'time':
             for column, line in enumerate(self.lines):
-                line.set_ydata((column+1) *self.flux_audio.plotdata[:, column])
+                line.set_ydata((column+1) *self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, column])
             return self.lines
         elif self.type_courbe == 'dft_modulus':
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                fft_audio = np.fft.fft(self.flux_audio.plotdata[0:self.flux_audio.nb_ech_fenetre, column])
+                fft_audio = np.fft.fft(self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, column])
                 fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
                 if self.auto_adjust:
                     max_fft = np.max(fft_audio)
+                    print(max_fft)
                     if max_fft > self.max_module:
                         self.max_module = max_fft
                 spec_selec = fft_audio[self.flux_audio.k_min:self.flux_audio.k_max]
-                line.set_xdata(np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *
-                               self.flux_audio.Fe / self.flux_audio.nb_ech_fenetre)
-                line.set_ydata(spec_selec)
-            self.auto_adjust = False
+                #line.set_xdata(np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *
+                #               self.flux_audio.Fe / self.flux_audio.nb_ech_fenetre)
+                #line.set_ydata(spec_selec)
+            self.lines = self.graphique.plot(self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, :])
+            self.auto_adjust = True
             return self.lines
         elif self.type_courbe == 'spectrogram':
             _, _, spectro = signal.spectrogram(
-                self.flux_audio.plotdata[0:self.flux_audio.nb_ech_fenetre, 0],
+                self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, column],
                 self.flux_audio.Fe,
                 nperseg=self.flux_audio.win_size_spectro,
                 noverlap=self.flux_audio.overlap_spectro)

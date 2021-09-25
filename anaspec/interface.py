@@ -5,6 +5,8 @@ pour la tfd, sélection de la bande de fréquence pour l'affichage
 pour le spectrogramme, sélection de la bande de fréquence, du nombre
 d'échantillon, du recouvrement, du type de fenêtrage
 """
+import sys
+import soundfile
 import wx
 import wx.lib.agw.aui as aui
 import fluxaudio
@@ -61,6 +63,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.dico_slider = None
         self.dico_label = None
         self.ctrl = None
+        self.ind_fichier = 0
         self.ind_page = 0
         self.duration = -1
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
@@ -191,6 +194,7 @@ class InterfaceAnalyseur(wx.Panel):
         _ = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
         barre_menu.Append(menu_about, '&Help')
         self.parent.SetMenuBar(barre_menu)
+        self.parent.Bind(wx.EVT_MENU, self.quitter,id=wx.ID_EXIT)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_in,id=200,id2=299)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_out,id=300,id2=399)
 
@@ -201,6 +205,13 @@ class InterfaceAnalyseur(wx.Panel):
         """
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
         evt.Veto()
+
+    def quitter(self, evt):
+        """
+        libérer ressource et quitter
+        """
+        sys.exit()
+
 
     def ajouter_page_tfd(self, name="Fourier"):
         """
@@ -268,8 +279,10 @@ class InterfaceAnalyseur(wx.Panel):
         bouton.Bind(wx.EVT_BUTTON, self.on_start_stop, bouton)
         self.ajouter_bouton((bouton,0), ctrl, ma_grille, font)
 
-        st_texte = wx.StaticText(page, label="")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        bouton = wx.Button(page, id=1001, label='Save signal')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.on_save, bouton)
+        self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
 
         st_texte = wx.StaticText(page, label="frequency")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -522,6 +535,20 @@ class InterfaceAnalyseur(wx.Panel):
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.SetLabel(self.dico_label[id_fenetre][0])
             self.flux_audio.courbe.page[ind_page].courbe_active = False
+
+
+    def on_save(self, event):
+        """
+        Défut/Fin de l'acquisition
+        """
+        self.ind_fichier = self.ind_fichier + 1
+
+        with soundfile.SoundFile("buffer"+str(self.ind_fichier)+".wav",
+                                 mode='w',
+                                 samplerate=self.flux_audio.Fe,
+                                 channels=self.flux_audio.nb_canaux,
+                                 subtype='FLOAT') as fichier:
+            fichier.write(self.flux_audio.plotdata)
 
 
     def on_start_stop(self, event):
