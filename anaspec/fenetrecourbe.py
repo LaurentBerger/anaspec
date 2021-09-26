@@ -128,7 +128,6 @@ class Plot(wx.Panel):
                 fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
                 if self.auto_adjust:
                     max_fft = np.max(fft_audio)
-                    print(max_fft)
                     if max_fft > self.max_module:
                         self.max_module = max_fft
                 spec_selec = fft_audio[self.flux_audio.k_min:self.flux_audio.k_max]
@@ -186,7 +185,7 @@ class PlotNotebook(wx.Panel):
             if page.courbe_active:
                 page.draw_page()
                 page.canvas.draw()
-                page.canvas.flush_events()
+                #page.canvas.flush_events()
         self.evt_process = True
 
     def etendue_axe(self, _):

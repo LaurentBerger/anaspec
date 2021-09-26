@@ -194,6 +194,7 @@ class InterfaceAnalyseur(wx.Panel):
         _ = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
         barre_menu.Append(menu_about, '&Help')
         self.parent.SetMenuBar(barre_menu)
+        self.parent.Bind(wx.EVT_CLOSE, self.close_page)
         self.parent.Bind(wx.EVT_MENU, self.quitter,id=wx.ID_EXIT)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_in,id=200,id2=299)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_out,id=300,id2=399)
