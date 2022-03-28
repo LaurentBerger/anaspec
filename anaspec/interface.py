@@ -5,6 +5,7 @@ pour la tfd, sélection de la bande de fréquence pour l'affichage
 pour le spectrogramme, sélection de la bande de fréquence, du nombre
 d'échantillon, du recouvrement, du type de fenêtrage
 """
+# pylint: disable=maybe-no-member
 import sys
 import soundfile
 import wx
@@ -527,12 +528,14 @@ class InterfaceAnalyseur(wx.Panel):
         couleur =  bouton.GetBackgroundColour()
         ind_page = self.dico_label[id_fenetre][2]
         if couleur[1] == 255:
+            print("Activation courbe")
             self.update_spectro_interface()
             self.update_tfd_interface()
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             bouton.SetLabel(self.dico_label[id_fenetre][1])
             self.flux_audio.courbe.page[ind_page].courbe_active = True
         else:
+            print("DesActivation courbe")
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.SetLabel(self.dico_label[id_fenetre][0])
             self.flux_audio.courbe.page[ind_page].courbe_active = False
