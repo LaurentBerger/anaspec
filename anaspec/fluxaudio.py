@@ -11,6 +11,7 @@ NEW_EVENT = None
 FLUX_AUDIO = None
 NB_BUFFER = 64
 
+
 class FluxAudio:
     """
     flux audio et ensemble des paramètres associés
@@ -61,7 +62,7 @@ class FluxAudio:
         if f_max > self.f_min_spectro:
             self.f_max_spectro = f_max
 
-    def set_win_size_spectro(self ,taille):
+    def set_win_size_spectro(self, taille):
         self.win_size_spectro = taille
 
     def set_overlap_spectro(self, recou):
@@ -70,7 +71,7 @@ class FluxAudio:
     def init_data_courbe(self):
         length = int(self.nb_ech_fenetre)
         self.plotdata = np.zeros((self.nb_buffer * length, self.nb_canaux))
-        self.mapping = [c-1  for c in range(self.nb_canaux)]  # Channel numbers start with 1
+        self.mapping = [c-1 for c in range(self.nb_canaux)]
 
     def set_frequency(self, freq_ech):
         self.Fe = freq_ech
@@ -80,7 +81,6 @@ class FluxAudio:
 
     def set_time_length(self, _):
         self.duration = -1
-
 
     def open(self, device_idx):
         self.init_data_courbe()
@@ -95,6 +95,7 @@ class FluxAudio:
     def close(self):
         self.stream.stop()
         self.stream.close()
+
 
 def audio_callback(indata, _frames, _time, status):
     """Fonction appelée lorsque des données audio sont disponibles."""

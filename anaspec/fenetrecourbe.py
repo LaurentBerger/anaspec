@@ -10,11 +10,14 @@ from scipy import signal
 
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
-from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg as NavigationToolbar
+from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg\
+   as NavigationToolbar
 
 import wx
 import wx.lib.newevent
 import wx.lib.agw.aui as aui
+
+# pylint: disable=maybe-no-member
 
 
 class Plot(wx.Panel):
@@ -38,7 +41,8 @@ class Plot(wx.Panel):
         self.toolbar.Realize()
         self.auto_adjust = True
         if type_courbe in ['time', 'dft_modulus']:
-            self.max_module = self.flux_audio.nb_ech_fenetre / self.flux_audio.Fe
+            self.max_module = self.flux_audio.nb_ech_fenetre /\
+                              self.flux_audio.Fe
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.canvas, 1, wx.EXPAND)
         sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
@@ -57,57 +61,66 @@ class Plot(wx.Panel):
         self.lines = None
         self.image = None
         nb_ech_fenetre = self.flux_audio.nb_ech_fenetre
+        plotdata = self.flux_audio.plotdata
         if self.type_courbe == 'time':
-            self.lines = self.graphique.plot(self.flux_audio.plotdata[-nb_ech_fenetre:, :])
-            self.graphique.axis((0, len(self.flux_audio.plotdata[-nb_ech_fenetre:, :]) /
+            self.lines = self.graphique.plot(plotdata[-nb_ech_fenetre:, :])
+            self.graphique.axis((0, len(plotdata[-nb_ech_fenetre:, :]) /
                                  self.flux_audio.nb_canaux, -1, 1))
-            self.graphique.legend(['channel {}'.format(c)
+            self.graphique.legend(['channel ' + str(c)
                                    for c in range(self.flux_audio.nb_canaux)],
-                                  loc='lower left', ncol=self.flux_audio.nb_canaux)
+                                  loc='lower left',
+                                  ncol=self.flux_audio.nb_canaux)
         elif self.type_courbe == 'dft_modulus':
             val_x = np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *\
                     self.flux_audio.Fe / nb_ech_fenetre
-            fft_audio = np.fft.fft(self.flux_audio.plotdata[-nb_ech_fenetre:, 0])
+            fft_audio = np.fft.fft(plotdata[-nb_ech_fenetre:, 0])
             fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
-            spec_selec = fft_audio[self.flux_audio.k_min:self.flux_audio.k_max]
-            self.max_module = nb_ech_fenetre / self.flux_audio.Fe /10
-            self.lines = self.graphique.plot(val_x,spec_selec)
-            self.graphique.axis((self.flux_audio.k_min*self.flux_audio.Fe /
+            spec_selec = fft_audio[self.flux_audio.k_min:
+                                   self.flux_audio.k_max]
+            self.max_module = nb_ech_fenetre / self.flux_audio.Fe / 10
+            self.lines = self.graphique.plot(val_x, spec_selec)
+            self.graphique.axis((self.flux_audio.k_min * self.flux_audio.Fe /
                                  nb_ech_fenetre,
                                  self.flux_audio.k_max*self.flux_audio.Fe /
                                  nb_ech_fenetre,
-                          0,
-                          self.max_module))
-            self.graphique.legend(['channel {}'.format(c)
+                                 0,
+                                 self.max_module))
+            self.graphique.legend(['channel ' + str(c)
                                    for c in range(self.flux_audio.nb_canaux)],
-                                   loc='upper right', ncol=self.flux_audio.nb_canaux)
+                                  loc='upper right',
+                                  ncol=self.flux_audio.nb_canaux)
         elif self.type_courbe == 'spectrogram':
             freq, temps, sxx = signal.spectrogram(
-                self.flux_audio.plotdata[-nb_ech_fenetre:, 0],
+                plotdata[-nb_ech_fenetre:, 0],
                 self.flux_audio.Fe,
-                window = (self.flux_audio.type_window),
+                window=(self.flux_audio.type_window),
                 nperseg=self.flux_audio.win_size_spectro,
                 noverlap=self.flux_audio.overlap_spectro)
             temps = temps[0:temps.shape[0]:max(1, temps.shape[0]//4)]
             cols = np.arange(0, sxx.shape[1], max(1, sxx.shape[1]//4))
-            labels = ["{:.2e}".format(x) for x in temps]
+            labels = [f"{x:.2e}" for x in temps]
             self.graphique.set_xticks(cols, minor=False)
             self.graphique.set_xticklabels(labels, fontdict=None, minor=False)
-            self.freq_ind_min = np.argmin(abs(freq-self.flux_audio.f_min_spectro))
-            self.freq_ind_max = np.argmin(abs(freq-self.flux_audio.f_max_spectro))
+            self.freq_ind_min = np.argmin(abs(freq -
+                                              self.flux_audio.f_min_spectro))
+            self.freq_ind_max = np.argmin(abs(freq -
+                                              self.flux_audio.f_max_spectro))
 
             freq = freq[self.freq_ind_min:self.freq_ind_max:
-                  max(1, (self.freq_ind_max - self.freq_ind_min) // 4)]
+                        max(1, (self.freq_ind_max - self.freq_ind_min) // 4)]
             rows = np.arange(self.freq_ind_min,
                              self.freq_ind_max,
-                             max(1, (self.freq_ind_max - self.freq_ind_min) // 4))
-            labels = ["{:.0f}".format(x) for x in freq]
+                             max(1,
+                                 (self.freq_ind_max - self.freq_ind_min) // 4))
+            labels = [f"{x:.0f}" for x in freq]
             self.graphique.set_yticks(rows, minor=False)
             self.graphique.set_yticklabels(labels, fontdict=None, minor=False)
             sxx[0, 0] = 1 / self.flux_audio.Fe
-            self.image = self.graphique.imshow(sxx[self.freq_ind_min:self.freq_ind_max, :],
-                                        origin='lower',
-                                        aspect='auto')
+            self.image = self.graphique.imshow(sxx[self.freq_ind_min:
+                                                   self.freq_ind_max,
+                                                   :],
+                                               origin='lower',
+                                               aspect='auto')
 
     def draw_page(self):
         """Tracer de la fenêtre en fonction
@@ -122,8 +135,10 @@ class Plot(wx.Panel):
             shift = len(data)
             # print("data shape :", data.shape)
             # print("plotdata shape :", self.flux_audio.plotdata.shape)
-            if shift<self.flux_audio.plotdata.shape[0]:
-                self.flux_audio.plotdata = np.roll(self.flux_audio.plotdata, -shift, axis=0)
+            if shift < self.flux_audio.plotdata.shape[0]:
+                self.flux_audio.plotdata = np.roll(self.flux_audio.plotdata,
+                                                   -shift,
+                                                   axis=0)
                 self.flux_audio.plotdata[-shift:, :] = data
             else:
                 return None
@@ -132,24 +147,29 @@ class Plot(wx.Panel):
         plot_data = self.flux_audio.plotdata
         if self.type_courbe == 'time':
             for column, line in enumerate(self.lines):
-                line.set_ydata((column+1) *plot_data[-self.flux_audio.nb_ech_fenetre:, column])
+                line.set_ydata((column+1) *
+                               plot_data[-self.flux_audio.nb_ech_fenetre:,
+                                         column])
             return self.lines
         if self.type_courbe == 'dft_modulus':
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                fft_audio = np.fft.fft(plot_data[-self.flux_audio.nb_ech_fenetre:, column])
+                fft_audio = np.fft.fft(
+                                plot_data[-self.flux_audio.nb_ech_fenetre:,
+                                          column])
                 fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
                 if self.auto_adjust:
                     max_fft = np.max(fft_audio)
                     if max_fft > self.max_module:
                         self.max_module = max_fft
-                spec_selec = fft_audio[self.flux_audio.k_min:self.flux_audio.k_max]
-                val_x = np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *\
-                        self.flux_audio.Fe / self.flux_audio.nb_ech_fenetre
+                spec_selec = fft_audio[self.flux_audio.k_min:
+                                       self.flux_audio.k_max]
+                val_x = np.arange(self.flux_audio.k_min,
+                                  self.flux_audio.k_max) *\
+                    self.flux_audio.Fe / self.flux_audio.nb_ech_fenetre
                 line.set_xdata(val_x)
                 line.set_ydata(spec_selec)
-                #self.lines = self.graphique.plot(val_x, spec_selec)
             self.auto_adjust = True
             return self.lines
         if self.type_courbe == 'spectrogram':
@@ -200,7 +220,6 @@ class PlotNotebook(wx.Panel):
             if page.courbe_active:
                 page.draw_page()
                 page.canvas.draw()
-                #page.canvas.flush_events()
         self.evt_process = True
 
     def etendue_axe(self, _):

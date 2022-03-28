@@ -14,6 +14,5 @@ frame = wx.Frame(None, -1, 'Mes Courbes')
 interface_audio = interface.InterfaceAnalyseur(frame)
 frame.Show()
 print(sd.query_devices())
-device = None
 
 application.MainLoop()
