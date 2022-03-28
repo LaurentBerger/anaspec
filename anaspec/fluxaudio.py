@@ -6,26 +6,28 @@ import sounddevice as sd
 import wx
 import wx.lib.newevent
 
-new_event = None
-flux_audio = None
+NEW_EVENT = None
+# flux_audio variable global utilisée dans callback  audio_callback
+FLUX_AUDIO = None
+NB_BUFFER = 64
 
 class FluxAudio:
     """
     flux audio et ensemble des paramètres associés
     """
     def __init__(self, n_evt, freq=44100, fenetre=2048, canaux=2):
-        global new_event
-        global flux_audio
-        flux_audio = self
-        new_event = n_evt
-        self.NB_BUFFER = 64
+        global NEW_EVENT
+        global FLUX_AUDIO
+        FLUX_AUDIO = self
+        NEW_EVENT = n_evt
+        self.nb_buffer = 64
         self.ind_buffer = 0
         self.nb_ech_fenetre = fenetre
         self.nb_canaux = canaux
         self.tps_refresh = 0.1
         self.Fe = freq
         self.courbe = None
-        self.q = queue.Queue()
+        self.file_attente = queue.Queue()
         self.stream = None
         self.duration = -1
         self.plotdata = None
@@ -39,58 +41,54 @@ class FluxAudio:
         self.type_fenetre = ('boxcar')
 
     def get_device(self):
-        s = sd.query_devices()
-        return s
+        return sd.query_devices()
 
-    def set_k_min(self, v):
-        v = int(v / self.Fe * self.nb_ech_fenetre)
-        if v < self.k_max:
-            self.k_min = v
-    def set_k_max(self, v):
-        v = int(v / self.Fe * self.nb_ech_fenetre)
-        if v > self.k_min:
-            self.k_max = v
+    def set_k_min(self, idx_min):
+        idx_min = int(idx_min / self.Fe * self.nb_ech_fenetre)
+        if idx_min < self.k_max:
+            self.k_min = idx_min
 
-    def set_f_min_spectro(self, v):
-        if v < self.f_max_spectro:
-            self.f_min_spectro = v
+    def set_k_max(self, idx_max):
+        idx_max = int(idx_max / self.Fe * self.nb_ech_fenetre)
+        if idx_max > self.k_min:
+            self.k_max = idx_max
 
-    def set_f_max_spectro(self,v):
-        if v > self.f_min_spectro:
-            self.f_max_spectro = v
+    def set_f_min_spectro(self, f_min):
+        if f_min < self.f_max_spectro:
+            self.f_min_spectro = f_min
 
-    def set_win_size_spectro(self,v):
-        self.win_size_spectro = v
+    def set_f_max_spectro(self, f_max):
+        if f_max > self.f_min_spectro:
+            self.f_max_spectro = f_max
 
-    def set_overlap_spectro(self,v):
-        self.overlap_spectro = v
+    def set_win_size_spectro(self ,taille):
+        self.win_size_spectro = taille
+
+    def set_overlap_spectro(self, recou):
+        self.overlap_spectro = recou
 
     def init_data_courbe(self):
         length = int(self.nb_ech_fenetre)
-        self.plotdata = np.zeros((self.NB_BUFFER * length, self.nb_canaux))
+        self.plotdata = np.zeros((self.nb_buffer * length, self.nb_canaux))
         self.mapping = [c-1  for c in range(self.nb_canaux)]  # Channel numbers start with 1
 
-    def set_frequency(self, v):
-        self.Fe = freq
+    def set_frequency(self, freq_ech):
+        self.Fe = freq_ech
 
-    def set_window_size(self, v):
-        self.nb_ech_fenetre = fenetre
+    def set_window_size(self, nb_ech):
+        self.nb_ech_fenetre = nb_ech
 
-    def set_time_length(self, v):
+    def set_time_length(self, _):
         self.duration = -1
 
 
     def open(self, device_idx):
         self.init_data_courbe()
         print(device_idx)
-        try:
 
-            self.stream = sd.InputStream(
-                device=device_idx, channels=self.nb_canaux-1,
-                samplerate=self.Fe, callback=audio_callback)
-        except Exception as e:
-            print(sys.exc_info())
-            return False
+        self.stream = sd.InputStream(
+            device=device_idx, channels=self.nb_canaux-1,
+            samplerate=self.Fe, callback=audio_callback)
         self.stream.start()
         return True
 
@@ -100,14 +98,13 @@ class FluxAudio:
 
 def audio_callback(indata, _frames, _time, status):
     """Fonction appelée lorsque des données audio sont disponibles."""
-    global flux_audio
     if status:
         print(status, file=sys.stderr)
     # Copie des données dans la file:
-    flux_audio.q.put(indata[:, flux_audio.mapping])
-    if flux_audio.courbe.evt_process:
+    FLUX_AUDIO.file_attente.put(indata[:, FLUX_AUDIO.mapping])
+    if FLUX_AUDIO.courbe.evt_process:
         # Création d'un événement
-        flux_audio.courbe.evt_process = False
-        evt = new_event(attr1="audio_callback", attr2=0)
+        FLUX_AUDIO.courbe.evt_process = False
+        evt = NEW_EVENT(attr1="audio_callback", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
-        wx.PostEvent(flux_audio.courbe, evt)
+        wx.PostEvent(FLUX_AUDIO.courbe, evt)
