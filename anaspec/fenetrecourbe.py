@@ -132,7 +132,8 @@ class Plot(wx.Panel):
                 data = self.flux_audio.file_attente.get_nowait()
             except queue.Empty:
                 break
-            shift = len(data)
+
+            shift = data.shape[0]
             # print("data shape :", data.shape)
             # print("plotdata shape :", self.flux_audio.plotdata.shape)
             if shift < self.flux_audio.plotdata.shape[0]:

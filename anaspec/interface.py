@@ -101,6 +101,7 @@ class InterfaceAnalyseur(wx.Panel):
                             'exponential': ('tau', None),
                             'tukey': ('alpha', None)}
         self.flux_audio.type_window = self.type_window[0]
+        self.choix_freq =  None # liste de choix pour les fréquences
 
     def select_audio_in(self, event):
         """
@@ -118,6 +119,11 @@ class InterfaceAnalyseur(wx.Panel):
         nom_periph_in = obj.GetLabel(id_fenetre)
         if nom_periph_in in self.idmenu_audio_in:
             self.idx_periph_in = self.idmenu_audio_in[nom_periph_in]
+            self.flux_audio.nb_canaux = self.liste_periph[self.idx_periph_in]["max_input_channels"]
+            self.flux_audio.capacite_periph_in(self.liste_periph, self.idx_periph_in)
+            self.flux_audio.init_data_courbe()
+        if self.choix_freq is not None:
+            self.maj_choix_freq()
 
     def disable_item_check(self, indexe=1):
         """
@@ -252,7 +258,7 @@ class InterfaceAnalyseur(wx.Panel):
                              id=SLIDER_F_MIN_TFD,
                              value=0,
                              minValue=0,
-                             maxValue=self.flux_audio.Fe/2,
+                             maxValue=self.flux_audio.Fe//2,
                              style=style_texte,
                              name="LowFrequency")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -267,9 +273,9 @@ class InterfaceAnalyseur(wx.Panel):
 
         st_texte = wx.Slider(page,
                              id=SLIDER_F_MAX_TFD,
-                             value=self.flux_audio.Fe/2,
+                             value=self.flux_audio.Fe//2,
                              minValue=0,
-                             maxValue=self.flux_audio.Fe/2,
+                             maxValue=self.flux_audio.Fe//2,
                              style=style_texte,
                              name="HighFrequency")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -308,10 +314,16 @@ class InterfaceAnalyseur(wx.Panel):
         self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
 
         st_texte = wx.StaticText(page, label="frequency")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
-        st_texte = wx.TextCtrl(page, value=str(self.flux_audio.Fe))
-        self.ajouter_bouton((st_texte, 1), ctrl, ma_grille, font)
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        choix = []
+        for val_freq in self.flux_audio.frequence_dispo:
+            choix.append(val_freq)
+        self.choix_freq = wx.Choice(page, choices=choix)
+        self.ajouter_bouton((self.choix_freq, 1), ctrl, ma_grille, font)
+
+        # st_texte = wx.TextCtrl(page, value=str(self.flux_audio.Fe))
+        # self.ajouter_bouton((st_texte, 1), ctrl, ma_grille, font)
 
         st_texte = wx.StaticText(page,
                                  label="recording Time (-1 for infinite)")
@@ -332,6 +344,13 @@ class InterfaceAnalyseur(wx.Panel):
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.ind_page = self.ind_page + 1
+
+    def maj_choix_freq(self):
+        self.choix_freq.Clear()
+        choix = []
+        for val_freq in self.flux_audio.frequence_dispo:
+            self.choix_freq.Append(val_freq)
+        self.choix_freq.SetSelection(0)
 
     def ajouter_page_spectrogram(self, name="Spectrogram"):
         """
@@ -362,7 +381,7 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte = wx.Slider(page, id=SLIDER_F_MIN_SPECTRO,
                              value=self.flux_audio.f_min_spectro,
                              minValue=0,
-                             maxValue=self.flux_audio.Fe/2,
+                             maxValue=self.flux_audio.Fe//2,
                              style=style_texte,
                              name="LowFrequency")
         self.dico_slider[SLIDER_F_MIN_SPECTRO] =\
@@ -380,7 +399,7 @@ class InterfaceAnalyseur(wx.Panel):
                              id=SLIDER_F_MAX_SPECTRO,
                              value=self.flux_audio.f_max_spectro,
                              minValue=0,
-                             maxValue=self.flux_audio.Fe/2,
+                             maxValue=self.flux_audio.Fe//2,
                              style=style_texte,
                              name="HighFrequency")
         self.dico_slider[SLIDER_F_MAX_SPECTRO] =\
@@ -406,6 +425,7 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte.Bind(wx.EVT_SCROLL,
                       self.change_slider,
                       st_texte,
+
                       SLIDER_WINDOW_SIZE_SPECTRO)
         self.dico_slider[SLIDER_WINDOW_SIZE_SPECTRO] = \
             self.flux_audio.set_win_size_spectro
@@ -522,10 +542,10 @@ class InterfaceAnalyseur(wx.Panel):
     def update_spectro_interface(self):
         low = wx.Window.FindWindowById(SLIDER_F_MIN_SPECTRO)
         if low:
-            low.SetMax(self.flux_audio.Fe/2)
+            low.SetMax(self.flux_audio.Fe//2)
         high = wx.Window.FindWindowById(SLIDER_F_MAX_SPECTRO)
         if high:
-            high.SetMax(self.flux_audio.Fe/2)
+            high.SetMax(self.flux_audio.Fe//2)
         win_size = wx.Window.FindWindowById(SLIDER_WINDOW_SIZE_SPECTRO)
         if win_size:
             win_size.SetMax(self.flux_audio.nb_ech_fenetre)
@@ -536,10 +556,10 @@ class InterfaceAnalyseur(wx.Panel):
     def update_tfd_interface(self):
         low = wx.Window.FindWindowById(SLIDER_F_MIN_TFD)
         if low:
-            low.SetMax(self.flux_audio.Fe/2)
+            low.SetMax(self.flux_audio.Fe//2)
         high = wx.Window.FindWindowById(SLIDER_F_MAX_TFD)
         if high:
-            high.SetMax(self.flux_audio.Fe/2)
+            high.SetMax(self.flux_audio.Fe//2)
 
     def ajouter_bouton(self, bouton, ctrl, ma_grille, font, option=wx.EXPAND):
         bouton[0].SetFont(font)
@@ -599,11 +619,11 @@ class InterfaceAnalyseur(wx.Panel):
 
     def on_save(self, _):
         """
-        Défut/Fin de l'acquisition
+        Début/Fin de l'acquisition
         """
         self.ind_fichier = self.ind_fichier + 1
 
-        with soundfile.SoundFile("buffer"+str(self.ind_fichier)+".wav",
+        with soundfile.SoundFile("buffer" + str(self.ind_fichier) + ".wav",
                                  mode='w',
                                  samplerate=self.flux_audio.Fe,
                                  channels=self.flux_audio.nb_canaux,
@@ -621,7 +641,9 @@ class InterfaceAnalyseur(wx.Panel):
         bouton = event.GetEventObject()
         texte_label = bouton.GetLabel()
         if texte_label == "Start":
-            self.set_frequency()
+            idx = self.choix_freq.GetCurrentSelection()
+            chaine_freq = self.choix_freq.GetString(idx)
+            self.flux_audio.set_frequency(int(float(chaine_freq)))
             self.set_window_size()
             self.set_time_length()
             self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
