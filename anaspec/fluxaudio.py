@@ -23,7 +23,7 @@ class FluxAudio:
         global FLUX_AUDIO
         FLUX_AUDIO = self
         NEW_EVENT = n_evt
-        self.nb_buffer = 16
+        self.nb_buffer = NB_BUFFER
         self.ind_buffer = 0
         self.nb_ech_fenetre = fenetre
         self.nb_canaux = canaux
