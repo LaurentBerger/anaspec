@@ -320,6 +320,7 @@ class InterfaceAnalyseur(wx.Panel):
         for val_freq in self.flux_audio.frequence_dispo:
             choix.append(val_freq)
         self.choix_freq = wx.Choice(page, choices=choix)
+        self.choix_freq.Bind(wx.EVT_CHOICE, self.maj_interface_freq)
         self.ajouter_bouton((self.choix_freq, 1), ctrl, ma_grille, font)
 
         # st_texte = wx.TextCtrl(page, value=str(self.flux_audio.Fe))
@@ -351,6 +352,15 @@ class InterfaceAnalyseur(wx.Panel):
         for val_freq in self.flux_audio.frequence_dispo:
             self.choix_freq.Append(val_freq)
         self.choix_freq.SetSelection(0)
+
+
+    def maj_interface_freq(self, event):
+        idx = self.choix_freq.GetCurrentSelection()
+        chaine_freq = self.choix_freq.GetString(idx)
+        self.flux_audio.set_frequency(int(float(chaine_freq)))
+        self.update_spectro_interface()
+        self.update_tfd_interface()
+        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
 
     def ajouter_page_spectrogram(self, name="Spectrogram"):
         """
