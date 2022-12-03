@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>13d62a4b-fb30-4ce0-819c-34f0bfb5216a</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>anaspec.py</StartupFile>
+    <StartupFile>generation_signal.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -30,6 +30,7 @@
     <Compile Include="fluxaudio.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="generation_signal.py" />
     <Compile Include="interface.py">
       <SubType>Code</SubType>
     </Compile>

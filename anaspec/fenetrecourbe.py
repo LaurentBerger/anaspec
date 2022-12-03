@@ -64,8 +64,7 @@ class Plot(wx.Panel):
         plotdata = self.flux_audio.plotdata
         if self.type_courbe == 'time':
             self.lines = self.graphique.plot(plotdata[-nb_ech_fenetre:, :])
-            self.graphique.axis((0, len(plotdata[-nb_ech_fenetre:, :]) /
-                                 self.flux_audio.nb_canaux, -1, 1))
+            self.graphique.axis((0, nb_ech_fenetre , -1, 1))
             self.graphique.legend(['channel ' + str(c)
                                    for c in range(self.flux_audio.nb_canaux)],
                                   loc='lower left',
