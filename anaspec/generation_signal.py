@@ -16,20 +16,21 @@ import numpy as np
 import scipy.signal
 
 
-SLIDER_F0_CHIRP = 2001
-SLIDER_F1_CHIRP = 2002
 
-BOUTON_SAVE = 4001
-BOUTON_PLAY = 4002
+BOUTON_SAVE_CHIRP = 4001
+BOUTON_PLAY_CHIRP = 4002
+SLIDER_F0_CHIRP = 4003
+SLIDER_F1_CHIRP = 4004
 
-SLIDER_F_MIN_SPECTRO = 3001
-SLIDER_F_MAX_SPECTRO = 3002
-SLIDER_WINDOW_SIZE_SPECTRO = 3003
-SLIDER_OVERLAP_SPECTRO = 3004
-COMBO_WINDOW_TYPE = 3005
+BOUTON_SAVE_SINUS = 5001
+BOUTON_PLAY_SINUS = 5002
+SLIDER_F0_SINUS = 5003
 
-PARAM1_WINDOW_TYPE = COMBO_WINDOW_TYPE + 2
-PARAM2_WINDOW_TYPE = PARAM1_WINDOW_TYPE + 2
+BOUTON_SAVE_SQUARE = 6001
+BOUTON_PLAY_SQUARE = 6002
+SLIDER_F0_SQUARE = 6003
+
+
 
 
 class InterfaceGeneration(wx.Panel):
@@ -58,11 +59,15 @@ class InterfaceGeneration(wx.Panel):
         self.parent = parent
         self._f0_t0 = 0
         self._f1_t1 = 1000
+        self._f0_sinus = 1000
+        self._f0_square = 1000
         self.Fe = 22050
         self.t_ech = None
         self.dico_slider = {0: None}
         self.duree = 1
         self.methode = None
+        self.choix_Fe_sinus = None
+        self.choix_Fe_chirp =  None
         self.parent.Show()
 
     def f0_t0(self, f=None):
@@ -74,6 +79,16 @@ class InterfaceGeneration(wx.Panel):
         if f is not None:
             self._f1_t1 = f
         return self._f1_t1
+
+    def f0_sinus(self, f=None):
+        if f is not None:
+            self._f0_sinus = f
+        return self._f0_sinus
+
+    def f0_square(self, f=None):
+        if f is not None:
+            self._f0_square = f
+        return self._f0_square
 
     def disable_item_check(self, indexe=1):
         """
@@ -87,7 +102,7 @@ class InterfaceGeneration(wx.Panel):
             art.Check(False)
 
 
-    def ajouter_gadget(self, ctrl, fenetre, ma_grille, font, option=wx.EXPAND):
+    def ajouter_gadget(self, ctrl, fenetre, ma_grille, font, option=wx.EXPAND | wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL):
         ctrl[0].SetFont(font)
         fenetre.append(ctrl)
         ma_grille.Add(ctrl[0], 0, option)
@@ -99,16 +114,16 @@ class InterfaceGeneration(wx.Panel):
         pour le signal temporel, la tfd et le spectrogramme
         """
         sizer = wx.BoxSizer()
-        sizer.Add(self.note_book, 1, wx.EXPAND)
+        sizer.Add(self.note_book, 1, wx.EXPAND|wx.CENTER)
         self.SetSizer(sizer)
         self.ctrl = []
         self.dico_label = {0: ('Enable', 'Disable', 0)}
         self.dico_slider = {0: None}
         self.ind_page = 0
+        self.ajouter_page_sinus()
         self.ajouter_page_chirp()
         self.ajouter_page_square()
         self.ajouter_page_gaussian()
-        self.ajouter_page_sinus()
         self.note_book.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
         self.note_book.Refresh(True)
         self.note_book.SetSize(self.parent.GetClientSize())
@@ -217,9 +232,9 @@ class InterfaceGeneration(wx.Panel):
         st_texte = wx.StaticText(page, label="Sampling frequency")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         val_Fe = ['11025', '22050', '32000', '44100', '48000', '96000']
-        self.choix_Fe = wx.Choice(page, choices=val_Fe)
-        self.choix_Fe.SetSelection(3)
-        self.ajouter_gadget((self.choix_Fe, 1), ctrl, ma_grille, font)
+        self.choix_Fe_chirp = wx.Choice(page, choices=val_Fe)
+        self.choix_Fe_chirp.SetSelection(3)
+        self.ajouter_gadget((self.choix_Fe_chirp, 1), ctrl, ma_grille, font)
         st_texte = wx.StaticText(page, label="Chirp method")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         self.choix_chirp = wx.Choice(page, choices=type_chirp)
@@ -261,18 +276,16 @@ class InterfaceGeneration(wx.Panel):
                     self.change_slider,
                     gadget,
                     SLIDER_F1_CHIRP)
-        bouton = wx.Button(page, id=BOUTON_SAVE)
+        bouton = wx.Button(page, id=BOUTON_SAVE_CHIRP)
         bouton.SetLabel('Save')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
         bouton.Bind(wx.EVT_BUTTON, self.save_chirp, bouton)
         self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
-        bouton = wx.Button(page, id=BOUTON_PLAY)
+        bouton = wx.Button(page, id=BOUTON_PLAY_CHIRP)
         bouton.SetLabel('Play')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
         bouton.Bind(wx.EVT_BUTTON, self.play_chirp, bouton)
         self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
-
-
         self.ind_page = self.ind_page + 1
 
 
@@ -294,20 +307,89 @@ class InterfaceGeneration(wx.Panel):
         self.ctrl.append(ctrl)
         self.ind_page = self.ind_page + 1
 
+    def maj_param_sinus(self):
+        self.t_ech = np.arange(0,self.duree,1/self.Fe)
+        idx =  self.choix_chirp.GetCurrentSelection()
+        self.methode = self.choix_chirp.GetString(idx)
+
+    def sinus(self):
+        self.signal = np.sin(self.t_ech * 2 * np.pi * self.f0_sinus())
+        return True
+
+    def play_sinus(self, event):
+        """
+        Jouer le sinus
+        """
+        self.maj_param_sinus()
+        if self.sinus():
+            sounddevice.play(self.signal, self.Fe)
+        else:
+            wx.LogError(self.err_msg)
+
+    def save_sinus(self, event):
+        """
+        sauvegarde du sinus
+        """
+        self.maj_param_sinus()
+        if self.sinus():
+            nom_fichier = "sinus_" + self.methode +  "_"
+            nom_fichier = nom_fichier + str(self.duree) + "s_"
+            nom_fichier = nom_fichier + str(self.f0_sinus())
+            nom_fichier = nom_fichier + ".wav"
+            with soundfile.SoundFile(nom_fichier,
+                                     mode='w',
+                                     samplerate=self.Fe,
+                                     channels=1,
+                                     subtype='FLOAT') as fichier:
+                fichier.write(self.signal)
+        else:
+            wx.LogError(self.err_msg)
 
     def ajouter_page_sinus(self, name="Sinus"):
         """
-        création de l'onglet Chirp
-        pour paramétrer le chirp selon doc scipy 
+        création de l'onglet sinus
+        pour paramétrer un sinus de fréquence F0 et
+        de durée 
         """
         ctrl = []
         page = wx.Panel(self.note_book)
-        font = wx.Font(10,
+        font = wx.Font(12,
                        wx.FONTFAMILY_DEFAULT,
-                       wx.FONTSTYLE_NORMAL,
+                       wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=3, cols=2, vgap=5, hgap=5)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        st_texte = wx.StaticText(page, label="Sampling frequency")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+        val_Fe = ['11025', '22050', '32000', '44100', '48000', '96000']
+        self.choix_Fe_sinus = wx.Choice(page, choices=val_Fe)
+        self.choix_Fe_sinus.SetSelection(3)
+        self.ajouter_gadget((self.choix_Fe_sinus, 1), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="Frequency")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_F0_SINUS,
+                           value=self.f0_sinus(),
+                           minValue=0,
+                           maxValue=self.Fe//2,
+                           style=style_texte)
+        self.dico_slider[SLIDER_F0_SINUS] = self.f0_sinus
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_F0_SINUS)
 
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font)
+        bouton = wx.Button(page, id=BOUTON_SAVE_SINUS)
+        bouton.SetLabel('Save')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.save_sinus, bouton)
+        self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
+        bouton = wx.Button(page, id=BOUTON_PLAY_SINUS)
+        bouton.SetLabel('Play')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.play_sinus, bouton)
+        self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
         page.SetSizerAndFit(ma_grille)
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
