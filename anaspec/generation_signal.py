@@ -21,14 +21,17 @@ BOUTON_SAVE_CHIRP = 4001
 BOUTON_PLAY_CHIRP = 4002
 SLIDER_F0_CHIRP = 4003
 SLIDER_F1_CHIRP = 4004
+SLIDER_DUREE_CHIRP = 4005
 
 BOUTON_SAVE_SINUS = 5001
 BOUTON_PLAY_SINUS = 5002
 SLIDER_F0_SINUS = 5003
+SLIDER_DUREE_SINUS = 5005
 
 BOUTON_SAVE_SQUARE = 6001
 BOUTON_PLAY_SQUARE = 6002
 SLIDER_F0_SQUARE = 6003
+SLIDER_DUREE_SQUARE = 6005
 
 
 
@@ -64,7 +67,9 @@ class InterfaceGeneration(wx.Panel):
         self.Fe = 22050
         self.t_ech = None
         self.dico_slider = {0: None}
-        self.duree = 1
+        self._duree_chirp = 1
+        self._duree_sinus = 1
+        self._duree_square = 1
         self.methode = None
         self.choix_Fe_sinus = None
         self.choix_Fe_chirp =  None
@@ -89,6 +94,21 @@ class InterfaceGeneration(wx.Panel):
         if f is not None:
             self._f0_square = f
         return self._f0_square
+
+    def duree_square(self, f=None):
+        if f is not None:
+            self._duree_square = f
+        return self._duree_square
+
+    def duree_sinus(self, f=None):
+        if f is not None:
+            self._duree_sinus = f
+        return self._duree_sinus
+
+    def duree_chirp(self, f=None):
+        if f is not None:
+            self._duree_chirp = f
+        return self._duree_chirp
 
     def disable_item_check(self, indexe=1):
         """
@@ -171,7 +191,7 @@ class InterfaceGeneration(wx.Panel):
         self.dico_slider[id_fenetre](val)
 
     def maj_param_chirp(self):
-        self.t_ech = np.arange(0,self.duree,1/self.Fe)
+        self.t_ech = np.arange(0,self._duree_chirp,1/self.Fe)
         idx =  self.choix_chirp.GetCurrentSelection()
         self.methode = self.choix_chirp.GetString(idx)
 
@@ -179,7 +199,7 @@ class InterfaceGeneration(wx.Panel):
         try:
             self.signal = scipy.signal.chirp(self.t_ech, 
                                              self.f0_t0(),
-                                             self.duree,
+                                             self._duree_chirp,
                                              self.f1_t1(),
                                              method=self.methode)
             return True
@@ -204,7 +224,7 @@ class InterfaceGeneration(wx.Panel):
         self.maj_param_chirp()
         if self.chirp():
             nom_fichier = "chirp_" + self.methode +  "_"
-            nom_fichier = nom_fichier + str(self.duree) + "s_"
+            nom_fichier = nom_fichier + str(self.duree_chirp()) + "s_"
             nom_fichier = nom_fichier + str(self.f0_t0()) + "_" + str(self.f1_t1())
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
@@ -227,25 +247,21 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=20, hgap=20)
         type_chirp = ['linear', 'quadratic', 'logarithmic', 'hyperbolic']
-        st_texte = wx.StaticText(page, label="Sampling frequency")
-        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         val_Fe = ['11025', '22050', '32000', '44100', '48000', '96000']
         self.choix_Fe_chirp = wx.Choice(page, choices=val_Fe)
         self.choix_Fe_chirp.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_chirp, 1), ctrl, ma_grille, font)
-        st_texte = wx.StaticText(page, label="Chirp method")
+        st_texte = wx.StaticText(page, label="Sampling frequency (Hz)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         self.choix_chirp = wx.Choice(page, choices=type_chirp)
         self.choix_chirp.SetSelection(0)
         self.ajouter_gadget((self.choix_chirp, 1), ctrl, ma_grille, font)
-
-        page.SetSizerAndFit(ma_grille)
-        self.note_book.AddPage(page, name)
-        self.ctrl.append(ctrl)
-        st_texte = wx.StaticText(page, label="Initial frequency")
+        st_texte = wx.StaticText(page, label="Chirp method")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+
+        self.ctrl.append(ctrl)
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
         gadget = wx.Slider(page,
                              id=SLIDER_F0_CHIRP,
@@ -259,9 +275,9 @@ class InterfaceGeneration(wx.Panel):
                     self.change_slider,
                     gadget,
                     SLIDER_F0_CHIRP)
-
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font)
-        st_texte = wx.StaticText(page, label="Last frequency")
+        st_texte = wx.StaticText(page, label="Initial frequency (Hz)")
+
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         gadget = wx.Slider(page,
                              id=SLIDER_F1_CHIRP,
@@ -276,6 +292,26 @@ class InterfaceGeneration(wx.Panel):
                     self.change_slider,
                     gadget,
                     SLIDER_F1_CHIRP)
+        st_texte = wx.StaticText(page, label="Last frequency (Hz)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                             id=SLIDER_DUREE_CHIRP,
+                             value=self.duree_chirp(),
+                             minValue=0,
+                             maxValue=2**18 // self.Fe,
+                             style=style_texte,
+                             name="Duration")
+        self.dico_slider[SLIDER_DUREE_CHIRP] = self.duree_chirp
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_DUREE_CHIRP)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="Chirp duration (s)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+
         bouton = wx.Button(page, id=BOUTON_SAVE_CHIRP)
         bouton.SetLabel('Save')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
@@ -286,6 +322,8 @@ class InterfaceGeneration(wx.Panel):
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
         bouton.Bind(wx.EVT_BUTTON, self.play_chirp, bouton)
         self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
+        page.SetSizerAndFit(ma_grille)
+        self.note_book.AddPage(page, name)
         self.ind_page = self.ind_page + 1
 
 
@@ -308,7 +346,7 @@ class InterfaceGeneration(wx.Panel):
         self.ind_page = self.ind_page + 1
 
     def maj_param_sinus(self):
-        self.t_ech = np.arange(0,self.duree,1/self.Fe)
+        self.t_ech = np.arange(0,self._duree_sinus,1/self.Fe)
         idx =  self.choix_chirp.GetCurrentSelection()
         self.methode = self.choix_chirp.GetString(idx)
 
@@ -333,7 +371,7 @@ class InterfaceGeneration(wx.Panel):
         self.maj_param_sinus()
         if self.sinus():
             nom_fichier = "sinus_" + self.methode +  "_"
-            nom_fichier = nom_fichier + str(self.duree) + "s_"
+            nom_fichier = nom_fichier + str(self.duree_sinus()) + "s_"
             nom_fichier = nom_fichier + str(self.f0_sinus())
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
@@ -358,13 +396,12 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
         ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
-        st_texte = wx.StaticText(page, label="Sampling frequency")
-        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         val_Fe = ['11025', '22050', '32000', '44100', '48000', '96000']
         self.choix_Fe_sinus = wx.Choice(page, choices=val_Fe)
         self.choix_Fe_sinus.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_sinus, 1), ctrl, ma_grille, font)
-        st_texte = wx.StaticText(page, label="Frequency")
+        st_texte = wx.StaticText(page, label="Sampling frequency (Hz)")
+
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
         gadget = wx.Slider(page,
@@ -378,8 +415,27 @@ class InterfaceGeneration(wx.Panel):
                     self.change_slider,
                     gadget,
                     SLIDER_F0_SINUS)
-
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="Frequency  (Hz)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_DUREE_SINUS,
+                           value=self.duree_sinus(),
+                           minValue=0,
+                           maxValue=2**18 // self.Fe,
+                           style=style_texte,
+                           name="Duration")
+        self.dico_slider[SLIDER_DUREE_SINUS] = self.duree_sinus
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_DUREE_SINUS)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="Sinusoide duration (s)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+
         bouton = wx.Button(page, id=BOUTON_SAVE_SINUS)
         bouton.SetLabel('Save')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
