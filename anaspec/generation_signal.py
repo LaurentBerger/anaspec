@@ -226,6 +226,8 @@ class InterfaceGeneration(wx.Panel):
 
     def maj_param_chirp(self):
         self.t_ech = np.arange(0,self._duree_chirp,1/self.Fe)
+        idx =  self.choix_Fe_chirp.GetCurrentSelection()
+        self.Fe = float(self.choix_Fe_chirp.GetString(idx))
         idx =  self.choix_chirp.GetCurrentSelection()
         self.methode = self.choix_chirp.GetString(idx)
 
@@ -361,10 +363,12 @@ class InterfaceGeneration(wx.Panel):
 
 
     def maj_param_gaussian(self):
+        idx =  self.choix_Fe_gaussian.GetCurrentSelection()
+        self.Fe = float(self.choix_Fe_gaussian.GetString(idx))
         self.t_ech = np.arange(-self._duree_gaussian/2,self._duree_gaussian/2,1/self.Fe)
 
     def signal_gaussian(self):
-        self.signal = scipy.signal.gausspulse(self.t_ech, fc=self.f0_gaussian(), bw=self._ratio_gaussian/100)
+        self.signal = scipy.signal.gausspulse(self.t_ech, fc=self.f0_gaussian(), bw=self._ratio_gaussian/1000)
         return True
 
     def save_gaussian(self, event):
@@ -419,11 +423,11 @@ class InterfaceGeneration(wx.Panel):
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
         gadget = wx.Slider(page,
                            id=SLIDER_F0_GAUSSIAN,
-                           value=self.f0_square(),
+                           value=self.f0_gaussian(),
                            minValue=0,
                            maxValue=self.Fe//2,
                            style=style_texte)
-        self.dico_slider[SLIDER_F0_GAUSSIAN] = self.f0_square
+        self.dico_slider[SLIDER_F0_GAUSSIAN] = self.f0_gaussian
         gadget.Bind(wx.EVT_SCROLL,
                     self.change_slider,
                     gadget,
@@ -435,7 +439,7 @@ class InterfaceGeneration(wx.Panel):
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
         gadget = wx.Slider(page,
                            id=SLIDER_DUREE_GAUSSIAN,
-                           value=self.duree_square(),
+                           value=self.duree_gaussian(),
                            minValue=0,
                            maxValue=2**18 // self.Fe,
                            style=style_texte,
@@ -454,7 +458,7 @@ class InterfaceGeneration(wx.Panel):
                            id=SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN,
                            value=self.ratio_square(),
                            minValue=0,
-                           maxValue=100,
+                           maxValue=1000,
                            style=style_texte,
                            name="Duration")
         self.dico_slider[SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN] = self.ratio_gaussian
@@ -463,7 +467,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Duty cycle (%)")
+        st_texte = wx.StaticText(page, label="Duty cycle (‰)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
 
@@ -483,6 +487,8 @@ class InterfaceGeneration(wx.Panel):
         self.ind_page = self.ind_page + 1
 
     def maj_param_sinus(self):
+        idx =  self.choix_Fe_sinus.GetCurrentSelection()
+        self.Fe = float(self.choix_Fe_sinus.GetString(idx))
         self.t_ech = np.arange(0,self._duree_sinus,1/self.Fe)
 
     def sinus(self):
@@ -586,6 +592,8 @@ class InterfaceGeneration(wx.Panel):
         self.ind_page = self.ind_page + 1
 
     def maj_param_square(self):
+        idx =  self.choix_Fe_square.GetCurrentSelection()
+        self.Fe = int(float(self.choix_Fe_square.GetString(idx)))
         self.t_ech = np.arange(0,self._duree_square,1/self.Fe)
 
     def signal_carre(self):
