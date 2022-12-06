@@ -10,7 +10,7 @@ import wx.lib.newevent
 import interface
 
 application = wx.App()
-frame = wx.Frame(None, -1, 'Mes Courbes')
+frame = wx.Frame(None, -1, 'Analyser')
 interface_audio = interface.InterfaceAnalyseur(frame)
 frame.Show()
 print(sd.query_devices())

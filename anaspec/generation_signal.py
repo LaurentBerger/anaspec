@@ -27,6 +27,7 @@ BOUTON_SAVE_SINUS = 5001
 BOUTON_PLAY_SINUS = 5002
 SLIDER_F0_SINUS = 5003
 SLIDER_DUREE_SINUS = 5005
+CASE_REFERENCE = 5006
 
 BOUTON_SAVE_SQUARE = 6001
 BOUTON_PLAY_SQUARE = 6002
@@ -69,12 +70,13 @@ class InterfaceGeneration(wx.Panel):
         self.parent = parent
         self.val_Fe = ['11025', '22050', '32000', '44100', '48000', '96000']
         self._f0_t0 = 0
-        self._f1_t1 = 1000
+        self._f1_t1 = 440
         self._f0_sinus = 1000
         self._f0_square = 1000
         self._f0_gaussian = 1000
         self._ratio_square = 50
         self._ratio_gaussian = 50
+        self.sinus_reference =  True
         self.Fe = 22050
         self.t_ech = None
         self.dico_slider = {0: None}
@@ -162,7 +164,7 @@ class InterfaceGeneration(wx.Panel):
         ma_grille.Add(ctrl[0], 0, option, 5)
 
 
-    def interface_acquisition(self):
+    def interface_generation_fct(self):
         """
         Mise en place de l'interface d'acquisition
         pour le signal temporel, la tfd et le spectrogramme
@@ -493,6 +495,8 @@ class InterfaceGeneration(wx.Panel):
 
     def sinus(self):
         self.signal = np.sin(self.t_ech * 2 * np.pi * self.f0_sinus())
+        if self.sinus_reference == True:
+            self.signal = self.signal + np.sin(self.t_ech * 2 * np.pi * 1000)
         return True
 
     def play_sinus(self, event):
@@ -523,6 +527,14 @@ class InterfaceGeneration(wx.Panel):
                 fichier.write(self.signal)
         else:
             wx.LogError(self.err_msg)
+
+    def maj_sinus_reference(self, evt):
+        case = evt.GetEventObject()
+        if case.GetValue():
+            self.sinus_reference = True
+        else:
+            self.sinus_reference = False
+
 
     def ajouter_page_sinus(self, name="Sinus"):
         """
@@ -575,6 +587,16 @@ class InterfaceGeneration(wx.Panel):
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
         st_texte = wx.StaticText(page, label="Sinusoide duration (s)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        case = wx.CheckBox(page, -1, 'Add 1000Hz frequency reference')
+        case.SetValue(self.sinus_reference)
+        case.Bind(wx.EVT_CHECKBOX,
+                    self.maj_sinus_reference,
+                    case,
+                    CASE_REFERENCE)
+
+        self.ajouter_gadget((case, 0), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
 
         bouton = wx.Button(page, id=BOUTON_SAVE_SINUS)
         bouton.SetLabel('Save')
@@ -735,6 +757,6 @@ if __name__ == '__main__':
     application = wx.App()
     my_frame = wx.Frame(None, -1, 'Interface')
     my_plotter = InterfaceGeneration(my_frame)
-    my_plotter.interface_acquisition()
+    my_plotter.interface_generation_fct()
     my_frame.Show()
     application.MainLoop()

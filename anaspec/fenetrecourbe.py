@@ -40,6 +40,8 @@ class Plot(wx.Panel):
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
         self.auto_adjust = True
+        self.best_debug = False
+        self.nb_data = 0 # nombre de données reçues
         if type_courbe in ['time', 'dft_modulus']:
             self.max_module = self.flux_audio.nb_ech_fenetre /\
                               self.flux_audio.Fe
@@ -60,9 +62,14 @@ class Plot(wx.Panel):
         self.figure.gca().set_prop_cycle(None)
         self.lines = None
         self.image = None
-        nb_ech_fenetre = self.flux_audio.nb_ech_fenetre
         plotdata = self.flux_audio.plotdata
+        if self.best_debug:
+            print( self.flux_audio.nb_ech_fenetre)
+            print( self.flux_audio.tfd_size)
+            print( self.flux_audio.k_min)
+            print( self.flux_audio.k_max)
         if self.type_courbe == 'time':
+            nb_ech_fenetre = self.flux_audio.nb_ech_fenetre
             self.lines = self.graphique.plot(plotdata[-nb_ech_fenetre:, :])
             self.graphique.axis((0, nb_ech_fenetre , -1, 1))
             self.graphique.legend(['channel ' + str(c)
@@ -70,18 +77,19 @@ class Plot(wx.Panel):
                                   loc='lower left',
                                   ncol=self.flux_audio.nb_canaux)
         elif self.type_courbe == 'dft_modulus':
+            tfd_size = self.flux_audio.tfd_size
             val_x = np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *\
-                    self.flux_audio.Fe / nb_ech_fenetre
-            fft_audio = np.fft.fft(plotdata[-nb_ech_fenetre:, 0])
+                    self.flux_audio.Fe / tfd_size
+            fft_audio = np.fft.fft(plotdata[-tfd_size:, 0])
             fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
             spec_selec = fft_audio[self.flux_audio.k_min:
                                    self.flux_audio.k_max]
-            self.max_module = nb_ech_fenetre / self.flux_audio.Fe / 10
+            self.max_module = tfd_size / self.flux_audio.Fe / 10
             self.lines = self.graphique.plot(val_x, spec_selec)
             self.graphique.axis((self.flux_audio.k_min * self.flux_audio.Fe /
-                                 nb_ech_fenetre,
+                                 tfd_size,
                                  self.flux_audio.k_max*self.flux_audio.Fe /
-                                 nb_ech_fenetre,
+                                 tfd_size,
                                  0,
                                  self.max_module))
             self.graphique.legend(['channel ' + str(c)
@@ -89,8 +97,9 @@ class Plot(wx.Panel):
                                   loc='upper right',
                                   ncol=self.flux_audio.nb_canaux)
         elif self.type_courbe == 'spectrogram':
+            spectro_size = self.flux_audio.spectro_size
             freq, temps, sxx = signal.spectrogram(
-                plotdata[-nb_ech_fenetre:, 0],
+                plotdata[-spectro_size:, 0],
                 self.flux_audio.Fe,
                 window=(self.flux_audio.type_window),
                 nperseg=self.flux_audio.win_size_spectro,
@@ -121,8 +130,8 @@ class Plot(wx.Panel):
                                                origin='lower',
                                                aspect='auto')
 
-    def draw_page(self):
-        """Tracer de la fenêtre en fonction
+    def new_sample(self):
+        """ Réception de nouvelle données
         du signal audio
         """
         while True:
@@ -133,6 +142,7 @@ class Plot(wx.Panel):
                 break
 
             shift = data.shape[0]
+            self.nb_data = self.nb_data + shift
             # print("data shape :", data.shape)
             # print("plotdata shape :", self.flux_audio.plotdata.shape)
             if shift < self.flux_audio.plotdata.shape[0]:
@@ -144,6 +154,14 @@ class Plot(wx.Panel):
                 return None
         if not self.courbe_active:
             return None
+        if self.nb_data > self.flux_audio.nb_ech_fenetre:
+            self.nb_data = 0
+            self.draw_page()
+
+    def draw_page(self):
+        """Tracer de la fenêtre en fonction
+        du signal audio
+        """
         plot_data = self.flux_audio.plotdata
         if self.type_courbe == 'time':
             for column, line in enumerate(self.lines):
@@ -156,7 +174,7 @@ class Plot(wx.Panel):
                 self.max_module = -1
             for column, line in enumerate(self.lines):
                 fft_audio = np.fft.fft(
-                                plot_data[-self.flux_audio.nb_ech_fenetre:,
+                                plot_data[-self.flux_audio.tfd_size:,
                                           column])
                 fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
                 if self.auto_adjust:
@@ -167,14 +185,14 @@ class Plot(wx.Panel):
                                        self.flux_audio.k_max]
                 val_x = np.arange(self.flux_audio.k_min,
                                   self.flux_audio.k_max) *\
-                    self.flux_audio.Fe / self.flux_audio.nb_ech_fenetre
+                    self.flux_audio.Fe / self.flux_audio.tfd_size
                 line.set_xdata(val_x)
                 line.set_ydata(spec_selec)
             self.auto_adjust = True
             return self.lines
         if self.type_courbe == 'spectrogram':
             _, _, spectro = signal.spectrogram(
-                self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre:, 0],
+                self.flux_audio.plotdata[-self.flux_audio.spectro_size:, 0],
                 self.flux_audio.Fe,
                 nperseg=self.flux_audio.win_size_spectro,
                 noverlap=self.flux_audio.overlap_spectro)
@@ -182,6 +200,7 @@ class Plot(wx.Panel):
             psd = spectro[self.freq_ind_min:self.freq_ind_max, :]
             self.image.set_data(psd)
             return self.image
+
 
 
 class PlotNotebook(wx.Panel):
@@ -218,7 +237,7 @@ class PlotNotebook(wx.Panel):
         self.clock = time.perf_counter()
         for page in self.page:
             if page.courbe_active:
-                page.draw_page()
+                page.new_sample()
                 page.canvas.draw()
         self.evt_process = True
 

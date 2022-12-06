@@ -23,9 +23,10 @@ class FluxAudio:
         global FLUX_AUDIO
         FLUX_AUDIO = self
         NEW_EVENT = n_evt
-        self.nb_buffer = NB_BUFFER
-        self.ind_buffer = 0
-        self.nb_ech_fenetre = fenetre
+        self.taille_buffer_signal = int(3*max(frequence_num))
+        self.nb_ech_fenetre = fenetre # pour l'acquisition
+        self.tfd_size = self.nb_ech_fenetre
+        self.spectro_size = self.nb_ech_fenetre
         self.nb_canaux = canaux
         self.tps_refresh = 0.1
         self.Fe = freq
@@ -36,11 +37,11 @@ class FluxAudio:
         self.plotdata = None
         self.mapping = None
         self.k_min = 0
-        self.k_max = fenetre//2+1
+        self.k_max = self.tfd_size//2+1
         self.f_min_spectro = 0
         self.f_max_spectro = self.Fe // 2
-        self.win_size_spectro = self.nb_ech_fenetre // 2
-        self.overlap_spectro = self.nb_ech_fenetre // 16
+        self.win_size_spectro = self.spectro_size // 2
+        self.overlap_spectro = self.spectro_size // 16
         self.type_fenetre = ('boxcar')
         self.simulate =  False
         self.frequence_dispo =  [] # frequence possible sur le périphérique
@@ -49,15 +50,21 @@ class FluxAudio:
     def get_device(self):
         return sd.query_devices()
 
+    def set_tfd_size(self, val):
+        self.tfd_size = val
+
     def set_k_min(self, idx_min):
-        idx_min = int(idx_min / self.Fe * self.nb_ech_fenetre)
+        idx_min = int(idx_min / self.Fe * self.tfd_size)
         if idx_min < self.k_max:
             self.k_min = idx_min
 
     def set_k_max(self, idx_max):
-        idx_max = int(idx_max / self.Fe * self.nb_ech_fenetre)
+        idx_max = int(idx_max / self.Fe * self.tfd_size)
         if idx_max > self.k_min:
             self.k_max = idx_max
+
+    def set_spectro_size(self, val):
+        self.spectro_size = val
 
     def set_f_min_spectro(self, f_min):
         if f_min < self.f_max_spectro:
@@ -74,8 +81,7 @@ class FluxAudio:
         self.overlap_spectro = recou
 
     def init_data_courbe(self):
-        length = int(self.nb_ech_fenetre)
-        self.plotdata = np.ones((self.nb_buffer * length, self.nb_canaux))
+        self.plotdata = np.ones((self.taille_buffer_signal, self.nb_canaux))
         self.mapping = [c-1 for c in range(self.nb_canaux)]
 
     def set_frequency(self, freq_ech):
