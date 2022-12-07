@@ -260,12 +260,13 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte = wx.StaticText(page, label="")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
-        st_texte = wx.StaticText(page, label="TFD size")
+        st_texte = wx.StaticText(page, label="TFD size",)
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        min_v = self.flux_audio.set_tfd_size()
         st_texte = wx.Slider(page,
                              id=SLIDER_TFD_SIZE,
-                             value=MIN_TFD_SIZE,
+                             value=min_v,
                              minValue=MIN_TFD_SIZE,
                              maxValue=65536,
                              style=style_texte,
@@ -502,6 +503,7 @@ class InterfaceAnalyseur(wx.Panel):
                       SLIDER_OVERLAP_SPECTRO)
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
+        """
         st_texte = wx.StaticText(page, label="Window")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         st_texte = wx.ComboBox(page,
@@ -518,7 +520,6 @@ class InterfaceAnalyseur(wx.Panel):
                       self.change_fenetrage,
                       st_texte,
                       COMBO_WINDOW_TYPE)
-
         st_texte = wx.StaticText(page, id=PARAM1_WINDOW_TYPE-1, label="")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         st_texte = wx.TextCtrl(page,
@@ -532,7 +533,7 @@ class InterfaceAnalyseur(wx.Panel):
                                id=PARAM2_WINDOW_TYPE,
                                value=str(self.flux_audio.Fe))
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-
+        """
         page.SetSizerAndFit(ma_grille)
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
@@ -792,4 +793,5 @@ if __name__ == '__main__':
     my_frame = wx.Frame(None, -1, 'Interface')
     my_plotter = InterfaceAnalyseur(my_frame)
     my_frame.Show()
+    wx.MessageBox("First choose peripherical in input device menu", "Warning", wx.ICON_WARNING)
     application.MainLoop()

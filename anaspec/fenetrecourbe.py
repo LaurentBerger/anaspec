@@ -33,6 +33,8 @@ class Plot(wx.Panel):
         self.figure, self.graphique = plt.subplots()
         self.lines = None
         self.image = None
+        self.sig_audio = None
+        self.fft_audio = None
         self.etendue_axe()
         self.graphique.yaxis.grid(True)
         self.figure.tight_layout(pad=0)
@@ -41,15 +43,45 @@ class Plot(wx.Panel):
         self.toolbar.Realize()
         self.auto_adjust = True
         self.best_debug = False
+        self.font = wx.Font(10,
+                           wx.FONTFAMILY_DEFAULT,
+                           wx.FONTSTYLE_NORMAL,
+                           wx.FONTWEIGHT_BOLD)
+
         self.nb_data = 0 # nombre de données reçues
         if type_courbe in ['time', 'dft_modulus']:
             self.max_module = self.flux_audio.nb_ech_fenetre /\
                               self.flux_audio.Fe
-        sizer = wx.BoxSizer(wx.VERTICAL)
-        sizer.Add(self.canvas, 1, wx.EXPAND)
-        sizer.Add(self.toolbar, 0, wx.LEFT | wx.EXPAND)
-        self.SetSizer(sizer)
+        presentation_fenetre = wx.BoxSizer(wx.VERTICAL)
+        presentation_status = wx.BoxSizer(wx.HORIZONTAL)
+        presentation_fenetre.Add(self.canvas, 1, wx.EXPAND)
+        presentation_status.Add(self.toolbar, 0)
+        self.info_curseur = wx.StaticText(self, label="")
+        self.info_curseur.SetFont(self.font)
+        presentation_status.Add(self.info_curseur,wx.EXPAND)
+        presentation_fenetre.Add(presentation_status)
+        self.canvas.mpl_connect('motion_notify_event', self.UpdateCurseur)
+        self.SetSizer(presentation_fenetre)
         self.tps = 0
+
+    def UpdateCurseur(self, event):
+        if event.inaxes:
+            x, y = event.xdata, event.ydata
+            match self.type_courbe:
+                case 'time':
+                    if self.flux_audio.plotdata is not None:
+                        idx = int(np.round(x))
+                        a = self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre+idx,:]
+                        texte = [format(v,".3e") for v in a ]
+                        self.info_curseur.SetLabel("Ech= " + str(idx) + "(s)  y=" + '/'.join(texte))
+                case 'dft_modulus':
+                     if self.flux_audio.plotdata is not None and self.fft_audio is not None:
+                        idx = int(np.round(self.flux_audio.tfd_size * x /self.flux_audio.Fe))
+                        if 0 <= idx < self.flux_audio.tfd_size:
+                            a = self.fft_audio[idx]
+                            texte = "f= " + str(idx * self.flux_audio.Fe / self.flux_audio.tfd_size) + "(Hz)  module=" + format(a,".3e")
+                            self.info_curseur.SetLabel(texte)
+
 
     def etendue_axe(self):
         if self.flux_audio.plotdata is None:
@@ -63,6 +95,7 @@ class Plot(wx.Panel):
         self.lines = None
         self.image = None
         plotdata = self.flux_audio.plotdata
+        
         if self.best_debug:
             print( self.flux_audio.nb_ech_fenetre)
             print( self.flux_audio.tfd_size)
@@ -80,10 +113,10 @@ class Plot(wx.Panel):
             tfd_size = self.flux_audio.tfd_size
             val_x = np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *\
                     self.flux_audio.Fe / tfd_size
-            fft_audio = np.fft.fft(plotdata[-tfd_size:, 0])
-            fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
-            spec_selec = fft_audio[self.flux_audio.k_min:
-                                   self.flux_audio.k_max]
+            self.fft_audio = np.fft.fft(plotdata[-tfd_size:, 0])
+            self.fft_audio = np.abs(self.fft_audio).real / self.flux_audio.Fe
+            spec_selec = self.fft_audio[self.flux_audio.k_min:
+                                        self.flux_audio.k_max]
             self.max_module = tfd_size / self.flux_audio.Fe / 10
             self.lines = self.graphique.plot(val_x, spec_selec)
             self.graphique.axis((self.flux_audio.k_min * self.flux_audio.Fe /
@@ -165,24 +198,22 @@ class Plot(wx.Panel):
         plot_data = self.flux_audio.plotdata
         if self.type_courbe == 'time':
             for column, line in enumerate(self.lines):
-                line.set_ydata((column+1) *
-                               plot_data[-self.flux_audio.nb_ech_fenetre:,
-                                         column])
+                line.set_ydata(plot_data[-self.flux_audio.nb_ech_fenetre:,column])
             return self.lines
         if self.type_courbe == 'dft_modulus':
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                fft_audio = np.fft.fft(
+                self.fft_audio = np.fft.fft(
                                 plot_data[-self.flux_audio.tfd_size:,
                                           column])
-                fft_audio = np.abs(fft_audio).real / self.flux_audio.Fe
+                self.fft_audio = np.abs(self.fft_audio).real / self.flux_audio.Fe
                 if self.auto_adjust:
-                    max_fft = np.max(fft_audio)
+                    max_fft = np.max(self.fft_audio)
                     if max_fft > self.max_module:
                         self.max_module = max_fft
-                spec_selec = fft_audio[self.flux_audio.k_min:
-                                       self.flux_audio.k_max]
+                spec_selec = self.fft_audio[self.flux_audio.k_min:
+                                            self.flux_audio.k_max]
                 val_x = np.arange(self.flux_audio.k_min,
                                   self.flux_audio.k_max) *\
                     self.flux_audio.Fe / self.flux_audio.tfd_size

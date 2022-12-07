@@ -14,5 +14,6 @@ frame = wx.Frame(None, -1, 'Analyser')
 interface_audio = interface.InterfaceAnalyseur(frame)
 frame.Show()
 print(sd.query_devices())
+wx.MessageBox("First choose peripherical in input device menu", "Warning", wx.ICON_WARNING)
 
 application.MainLoop()

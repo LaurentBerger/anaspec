@@ -1,3 +1,4 @@
+from pickle import NONE
 import queue
 import sys
 
@@ -50,8 +51,10 @@ class FluxAudio:
     def get_device(self):
         return sd.query_devices()
 
-    def set_tfd_size(self, val):
-        self.tfd_size = val
+    def set_tfd_size(self, val=None):
+        if val is not None:
+            self.tfd_size = val
+        return self.tfd_size
 
     def set_k_min(self, idx_min):
         idx_min = int(idx_min / self.Fe * self.tfd_size)
@@ -64,7 +67,9 @@ class FluxAudio:
             self.k_max = idx_max
 
     def set_spectro_size(self, val):
-        self.spectro_size = val
+        if val is not NONE:
+            self.spectro_size = val
+        return self.spectro_size
 
     def set_f_min_spectro(self, f_min):
         if f_min < self.f_max_spectro:
@@ -114,7 +119,6 @@ class FluxAudio:
     def open(self, device_idx):
         self.init_data_courbe()
         self.file_attente = queue.Queue()
-        print(device_idx)
         self.stream = sd.InputStream(
             device=device_idx, channels=self.nb_canaux,
             samplerate=self.Fe, callback=audio_callback)
@@ -133,7 +137,10 @@ def audio_callback(indata, _frames, _time, status):
     # Copie des données dans la file:
     if FLUX_AUDIO.simulate:
         x = np.zeros(shape=indata.shape,dtype=np.float64)
-        x[:,0] = np.linspace(-1, 1, indata.shape[0])
+        x[:,0] = np.linspace(0., 0.2, indata.shape[0])
+        if x.shape[1] == 2:
+            x[:,1] = np.linspace(-0.1, 0.1, indata.shape[0])
+        FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
     else:
         FLUX_AUDIO.file_attente.put(indata[:,FLUX_AUDIO.mapping])
     # FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
