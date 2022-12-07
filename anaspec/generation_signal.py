@@ -267,7 +267,7 @@ class InterfaceGeneration(wx.Panel):
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
                                      mode='w',
-                                     samplerate=self.Fe,
+                                     samplerate=int(self.Fe),
                                      channels=1,
                                      subtype='FLOAT') as fichier:
                 fichier.write(self.signal)
@@ -386,7 +386,7 @@ class InterfaceGeneration(wx.Panel):
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
                                      mode='w',
-                                     samplerate=self.Fe,
+                                     samplerate=int(self.Fe),
                                      channels=1,
                                      subtype='FLOAT') as fichier:
                 fichier.write(self.signal)
@@ -521,7 +521,7 @@ class InterfaceGeneration(wx.Panel):
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
                                      mode='w',
-                                     samplerate=self.Fe,
+                                     samplerate=int(self.Fe),
                                      channels=1,
                                      subtype='FLOAT') as fichier:
                 fichier.write(self.signal)
@@ -635,7 +635,7 @@ class InterfaceGeneration(wx.Panel):
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
                                      mode='w',
-                                     samplerate=self.Fe,
+                                     samplerate=int(self.Fe),
                                      channels=1,
                                      subtype='FLOAT') as fichier:
                 fichier.write(self.signal)

@@ -16,6 +16,11 @@ import fenetrecourbe as fc
 MIN_TFD_SIZE = 256
 MIN_SPECTRO_SIZE = 256
 
+SAVE_SIGNAL = 1001
+START_SAMPLING = 1002
+RECORDING_TIME = 1003
+UPDATE_ECH = 1004
+
 SLIDER_F_MIN_TFD = 2001
 SLIDER_F_MAX_TFD = 2002
 SLIDER_TFD_SIZE = 2003
@@ -202,6 +207,8 @@ class InterfaceAnalyseur(wx.Panel):
                                  if x['max_output_channels'] >= 1}
         barre_menu = wx.MenuBar()
         menu_fichier = wx.Menu()
+        _ = menu_fichier.Append(wx.ID_OPEN, 'Open', "open wave file")
+        _ = menu_fichier.Append(wx.ID_SAVE, 'Save', "save wave file")
         _ = menu_fichier.Append(wx.ID_EXIT, 'Quit', "exit program")
         barre_menu.Append(menu_fichier, '&File')
         _ = wx.Menu()
@@ -219,6 +226,8 @@ class InterfaceAnalyseur(wx.Panel):
         barre_menu.Append(menu_about, '&Help')
         self.parent.SetMenuBar(barre_menu)
         self.parent.Bind(wx.EVT_CLOSE, self.close_page)
+        self.parent.Bind(wx.EVT_MENU, self.open_wav, id=wx.ID_OPEN)
+        # self.parent.Bind(wx.EVT_MENU, self.save_page, id=wx.ID_SAVE)
         self.parent.Bind(wx.EVT_MENU, self.quitter, id=wx.ID_EXIT)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_in, id=200, id2=299)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_out, id=300, id2=399)
@@ -230,6 +239,38 @@ class InterfaceAnalyseur(wx.Panel):
         """
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
         evt.Veto()
+
+    def open_wav(self, _):
+        """
+        ouvrir un fichier wav et utilisé les données 
+        de la même manière que l'acquisition
+        """
+        if self.flux_audio.plotdata is None:
+               wx.MessageBox("First choose peripherical in input device menu", "Error", wx.ICON_ERROR)
+               return
+        nom_fichier_son = wx.FileSelector("Open wave file",wildcard="*.wav")
+        if nom_fichier_son.strip():
+            self.set_window_size()
+            son , Fe = soundfile.read(nom_fichier_son)
+            if self.flux_audio.Fe != Fe:
+                wx.MessageBox("Sampling frequency are not equal\n "+ str(self.flux_audio.Fe) + "Hz<> " +str(Fe), "Error", wx.ICON_ERROR)
+                return
+            nb_ech = min(son.shape[0], self.flux_audio.plotdata.shape[0])
+            if len(son.shape) == 1:
+                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] = son[:nb_ech]
+            else:
+                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] = son[:nb_ech,0]
+                if son.shape[1] != self.flux_audio.plotdata.shape[1]:
+                    wx.MessageBox("Channel number are not equal. First channel uses", "Warning", wx.ICON_WARNING)
+                elif son.shape[1] == 2:
+                    self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0]-nb_ech:,1] = son[:nb_ech,1] 
+            self.flux_audio.nb_ech_fenetre = nb_ech 
+            wx.MessageBox("Update sampling modified\n New value "+str(nb_ech), "Warning", wx.ICON_WARNING)
+            w = wx.Window.FindWindowById(UPDATE_ECH)
+            w.SetLabel(str(self.flux_audio.nb_ech_fenetre))
+            self.flux_audio.courbe.page[0].courbe_active = True
+            self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
+            self.flux_audio.courbe.draw_page(None)
 
     def quitter(self, _):
         """
@@ -268,7 +309,7 @@ class InterfaceAnalyseur(wx.Panel):
                              id=SLIDER_TFD_SIZE,
                              value=min_v,
                              minValue=MIN_TFD_SIZE,
-                             maxValue=65536,
+                             maxValue=self.flux_audio.taille_buffer_signal,
                              style=style_texte,
                              name="SIZE_TFD")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -329,12 +370,12 @@ class InterfaceAnalyseur(wx.Panel):
                        wx.FONTWEIGHT_BOLD)
         ma_grille = wx.GridSizer(rows=4, cols=2, vgap=5, hgap=5)
         self.dico_label[1000] = ('Start', 'Stop')
-        bouton = wx.Button(page, id=1000, label='Start')
+        bouton = wx.Button(page, id=START_SAMPLING, label='Start')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
         bouton.Bind(wx.EVT_BUTTON, self.on_start_stop, bouton)
         self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
 
-        bouton = wx.Button(page, id=1001, label='Save signal')
+        bouton = wx.Button(page, id=SAVE_SIGNAL, label='Save signal')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
         bouton.Bind(wx.EVT_BUTTON, self.on_save, bouton)
         self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
@@ -356,7 +397,7 @@ class InterfaceAnalyseur(wx.Panel):
                                  label="recording Time (-1 for infinite)")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
-        st_texte = wx.TextCtrl(page, value="-1", id=1001)
+        st_texte = wx.TextCtrl(page, value="-1", id=RECORDING_TIME)
         self.ajouter_bouton((st_texte, 1), ctrl, ma_grille, font)
 
         st_texte = wx.StaticText(page, label="# sampling before update ")
@@ -364,7 +405,7 @@ class InterfaceAnalyseur(wx.Panel):
 
         st_texte = wx.TextCtrl(page,
                                value=str(self.flux_audio.nb_ech_fenetre),
-                               id=1002)
+                               id=UPDATE_ECH)
         self.ajouter_bouton((st_texte, 1), ctrl, ma_grille, font)
 
         page.SetSizerAndFit(ma_grille)
@@ -467,7 +508,7 @@ class InterfaceAnalyseur(wx.Panel):
                       st_texte,
                       SLIDER_F_MAX_SPECTRO)
 
-        st_texte = wx.StaticText(page, label="Window size")
+        st_texte = wx.StaticText(page, label="Sampling Window size")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
         st_texte = wx.Slider(page, id=SLIDER_WINDOW_SIZE_SPECTRO,
@@ -613,11 +654,11 @@ class InterfaceAnalyseur(wx.Panel):
         w = wx.Window.FindWindowById(SLIDER_F_MAX_TFD)
         if w is not None:
             self.dico_slider[SLIDER_F_MAX_TFD](w.GetValue())
-        self.flux_audio.courbe.best_debug = True
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.tfd_size)
-        r_upd = self.flux_audio.courbe.GetClientRect()
-        self.flux_audio.courbe.Refresh(rect=r_upd)
-        self.flux_audio.courbe.draw_page(None)
+        if self.flux_audio.courbe.page[1].courbe_active:
+            self.flux_audio.courbe.etendue_axe(self.flux_audio.tfd_size)
+            r_upd = self.flux_audio.courbe.GetClientRect()
+            self.flux_audio.courbe.Refresh(rect=r_upd)
+            self.flux_audio.courbe.draw_page(None)
 
 
     def change_spectro_size(self, event):
@@ -637,10 +678,11 @@ class InterfaceAnalyseur(wx.Panel):
         w = wx.Window.FindWindowById(SLIDER_F_MAX_SPECTRO)
         if w is not None:
             self.dico_slider[SLIDER_F_MAX_SPECTRO](w.GetValue())
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.spectro_size)
-        r_upd = self.flux_audio.courbe.GetClientRect()
-        self.flux_audio.courbe.Refresh(rect=r_upd)
-        self.flux_audio.courbe.draw_page(None)
+        if self.flux_audio.courbe.page[2].courbe_active:
+            self.flux_audio.courbe.etendue_axe(self.flux_audio.spectro_size)
+            r_upd = self.flux_audio.courbe.GetClientRect()
+            self.flux_audio.courbe.Refresh(rect=r_upd)
+            self.flux_audio.courbe.draw_page(None)
 
 
     def update_spectro_interface(self):
@@ -650,9 +692,6 @@ class InterfaceAnalyseur(wx.Panel):
         high = wx.Window.FindWindowById(SLIDER_F_MAX_SPECTRO)
         if high:
             high.SetMax(self.flux_audio.Fe//2)
-        win_size = wx.Window.FindWindowById(SLIDER_WINDOW_SIZE_SPECTRO)
-        if win_size:
-            win_size.SetMax(self.flux_audio.nb_ech_fenetre)
         overlap = wx.Window.FindWindowById(SLIDER_OVERLAP_SPECTRO)
         if overlap:
             overlap.SetMax(self.flux_audio.nb_ech_fenetre-1)
