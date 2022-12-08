@@ -452,14 +452,14 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte = wx.StaticText(page, label="")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
-        st_texte = wx.StaticText(page, label="SPECTRO size")
+        st_texte = wx.StaticText(page, label="Input signal size for spectrogram")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
         st_texte = wx.Slider(page,
                              id=SLIDER_SPECTRO_SIZE,
                              value=MIN_SPECTRO_SIZE,
                              minValue=MIN_SPECTRO_SIZE,
-                             maxValue=65536,
+                             maxValue=self.flux_audio.taille_buffer_signal,
                              style=style_texte,
                              name="SIZE_SPECTRO")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -514,7 +514,7 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte = wx.Slider(page, id=SLIDER_WINDOW_SIZE_SPECTRO,
                              value=self.flux_audio.win_size_spectro,
                              minValue=0,
-                             maxValue=self.flux_audio.nb_ech_fenetre,
+                             maxValue=self.flux_audio.taille_buffer_signal//16,
                              style=style_texte,
                              name="WindowSize")
         st_texte.Bind(wx.EVT_SCROLL,

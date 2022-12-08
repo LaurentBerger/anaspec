@@ -20,20 +20,24 @@ import wx.lib.agw.aui as aui
 
 # pylint: disable=maybe-no-member
 EVENT_FFT = None
+PAGE_PLOT = None
 
 class CalculFFT(threading.Thread):
     """ calcul de la fft en utilisant un thread
     et envoie d'un événement en fin de calcul
     """
-    def __init__(self, x):
+    def __init__(self, x, fe):
         threading.Thread.__init__(self)
-        self.x = x
+        self.x = x.copy()
+        self.Fe = fe
     
     def run(self):
         self.z = np.fft.fft(self.x)
-        evt = EVENT_FFT(attr1="audio_callback", attr2=0)
+        self.z = np.abs(self.z).real / self.Fe
+        evt = EVENT_FFT(attr1="CalculFFT", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
-        wx.PostEvent(FLUX_AUDIO.courbe, evt)
+        if PAGE_PLOT:
+            wx.PostEvent(PAGE_PLOT, evt)
 
 
 class Plot(wx.Panel):
@@ -41,9 +45,13 @@ class Plot(wx.Panel):
     Fenetrage wx contenant un graphique matplotlib
     """
     def __init__(self, parent, f_audio, id_fenetre=-1, type_courbe='time'):
+        global EVENT_FFT, PAGE_PLOT
         wx.Panel.__init__(self, parent, id=id_fenetre)
-        self.new_event, self.id_evt = wx.lib.newevent.NewEvent()
-        EVENT_FFT = self.new_event
+        if type_courbe == 'dft_modulus':
+            self.new_event, self.id_evt = wx.lib.newevent.NewEvent()
+            self.Bind(self.id_evt, self.update_axe_fft)
+            PAGE_PLOT = self
+            EVENT_FFT = self.new_event
         self.flux_audio = f_audio
         self.type_courbe = type_courbe
         self.courbe_active = False
@@ -212,21 +220,8 @@ class Plot(wx.Panel):
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                self.fft_audio = np.fft.fft(
-                                plot_data[-self.flux_audio.tfd_size:,
-                                          column])
-                self.fft_audio = np.abs(self.fft_audio).real / self.flux_audio.Fe
-                if self.auto_adjust:
-                    max_fft = np.max(self.fft_audio)
-                    if max_fft > self.max_module:
-                        self.max_module = max_fft
-                spec_selec = self.fft_audio[self.flux_audio.k_min:
-                                            self.flux_audio.k_max]
-                val_x = np.arange(self.flux_audio.k_min,
-                                  self.flux_audio.k_max) *\
-                    self.flux_audio.Fe / self.flux_audio.tfd_size
-                line.set_xdata(val_x)
-                line.set_ydata(spec_selec)
+                self.thread_fft = CalculFFT(plot_data[-self.flux_audio.tfd_size:,column], self.flux_audio.Fe)
+                self.thread_fft.start()
             self.auto_adjust = True
             return self.lines
         if self.type_courbe == 'spectrogram':
@@ -240,12 +235,26 @@ class Plot(wx.Panel):
             self.image.set_data(psd)
             return self.image
 
-
+    def update_axe_fft(self, _evt):
+        self.fft_audio = self.thread_fft.z
+        if self.auto_adjust:
+            max_fft = np.max(self.fft_audio[1:])
+            if max_fft > self.max_module:
+                self.max_module = max_fft
+        spec_selec = self.fft_audio[self.flux_audio.k_min:
+                                    self.flux_audio.k_max]
+        val_x = np.arange(self.flux_audio.k_min,
+                            self.flux_audio.k_max) *\
+            self.flux_audio.Fe / self.flux_audio.tfd_size
+        self.lines[0].set_xdata(val_x)
+        self.lines[0].set_ydata(spec_selec)
+        return self.lines
 
 class PlotNotebook(wx.Panel):
     def __init__(self, parent, flux_a, id_fen=-1, evt_type=None):
         wx.Panel.__init__(self, parent, id=id_fen)
         self.flux_audio = flux_a
+        NOTE_BOOK = self
         self.note_book = aui.AuiNotebook(self)
         sizer = wx.BoxSizer()
         sizer.Add(self.note_book, 1, wx.EXPAND)
@@ -264,6 +273,7 @@ class PlotNotebook(wx.Panel):
         self.page.append(page)
         self.note_book.AddPage(page, name)
         self.note_book.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
+
         return page
 
     def draw_page(self, _evt):
