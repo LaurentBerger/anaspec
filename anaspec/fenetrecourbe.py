@@ -105,7 +105,7 @@ class Plot(wx.Panel):
                         idx = int(np.round(self.flux_audio.tfd_size * x /self.flux_audio.Fe))
                         if 0 <= idx < self.flux_audio.tfd_size:
                             a = self.fft_audio[idx]
-                            texte = "f= " + str(idx * self.flux_audio.Fe / self.flux_audio.tfd_size) + "(Hz)  module=" + format(a,".3e")
+                            texte = "f= " + format(idx * self.flux_audio.Fe / self.flux_audio.tfd_size, ".2e") + "(Hz)  module=" + format(a,".3e")
                             self.info_curseur.SetLabel(texte)
 
     def init_axe_time(self):
