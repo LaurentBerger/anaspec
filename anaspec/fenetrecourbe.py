@@ -100,7 +100,7 @@ class Plot(wx.Panel):
                             texte = "f= " + str(idx * self.flux_audio.Fe / self.flux_audio.tfd_size) + "(Hz)  module=" + format(a,".3e")
                             self.info_curseur.SetLabel(texte)
 
-    def tracer_axe_time(self):
+    def init_axe_time(self):
         plotdata = self.flux_audio.plotdata
         nb_ech_fenetre = self.flux_audio.nb_ech_fenetre
         self.lines = self.graphique.plot(plotdata[-nb_ech_fenetre:, :])
@@ -110,7 +110,7 @@ class Plot(wx.Panel):
                                 loc='lower left',
                                 ncol=self.flux_audio.nb_canaux)
 
-    def tracer_axe_fft(self):
+    def init_axe_fft(self):
         tfd_size = self.flux_audio.tfd_size
         val_x = np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *\
                 self.flux_audio.Fe / tfd_size
@@ -129,7 +129,7 @@ class Plot(wx.Panel):
                                 loc='upper right',
                                 ncol=self.flux_audio.nb_canaux)
 
-    def tracer_axe_spectro(self):
+    def init_axe_spectro(self):
         plotdata = self.flux_audio.plotdata
         cols = np.arange(0, self.sxx_spectro.shape[1], max(1, self.sxx_spectro.shape[1]//4))
         temps = self.tps_spectro[0:self.tps_spectro.shape[0]:max(1, self.tps_spectro.shape[0]//4)]
@@ -176,12 +176,12 @@ class Plot(wx.Panel):
             print( self.flux_audio.k_min)
             print( self.flux_audio.k_max)
         if self.type_courbe == 'time':
-            self.tracer_axe_time()
+            self.init_axe_time()
         elif self.type_courbe == 'dft_modulus':
             tfd_size = self.flux_audio.tfd_size
             self.fft_audio = np.fft.fft(plotdata[-tfd_size:, 0])
             self.fft_audio = np.abs(self.fft_audio).real / self.flux_audio.Fe
-            self.tracer_axe_fft()
+            self.init_axe_fft()
         elif self.type_courbe == 'spectrogram':
             spectro_size = self.flux_audio.spectro_size
             self.f_spectro, self.tps_spectro, self.sxx_spectro = signal.spectrogram(
@@ -190,7 +190,7 @@ class Plot(wx.Panel):
                 window=(self.flux_audio.type_window),
                 nperseg=self.flux_audio.win_size_spectro,
                 noverlap=self.flux_audio.overlap_spectro)
-            self.tracer_axe_spectro()
+            self.init_axe_spectro()
 
     def new_sample(self):
         """ Réception de nouvelle données
