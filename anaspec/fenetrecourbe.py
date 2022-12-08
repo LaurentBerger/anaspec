@@ -274,8 +274,8 @@ class PlotNotebook(wx.Panel):
             self.evt_process = True
             return
         self.clock = time.perf_counter()
-        nb_data = self.page[0].flux_audio.new_sample()
-        if nb_data > self.page[0].flux_audio.nb_ech_fenetre:
+        nb_data = self.flux_audio.new_sample()
+        if nb_data > self.flux_audio.nb_ech_fenetre:
             self.page[0].nb_data = 0
             for page in self.page:
                 if page.courbe_active:
