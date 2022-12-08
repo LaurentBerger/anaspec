@@ -29,6 +29,7 @@ class FluxAudio:
         self.tfd_size = self.nb_ech_fenetre
         self.spectro_size = self.nb_ech_fenetre
         self.nb_canaux = canaux
+        self.nb_data = 0
         self.tps_refresh = 0.1
         self.Fe = freq
         self.courbe = None
@@ -122,12 +123,37 @@ class FluxAudio:
         self.stream = sd.InputStream(
             device=device_idx, channels=self.nb_canaux,
             samplerate=self.Fe, callback=audio_callback)
+        self.nb_data = 0
         self.stream.start()
         return True
 
     def close(self):
         self.stream.stop()
         self.stream.close()
+
+    def new_sample(self):
+        """ Réception de nouvelle données
+        du signal audio
+        """
+        while True:
+            try:
+                # https://docs.python.org/3/library/queue.html#queue.Queue.get_nowait
+                data = self.file_attente.get_nowait()
+            except queue.Empty:
+                break
+
+            shift = data.shape[0]
+            self.nb_data = self.nb_data + shift
+            # print("data shape :", data.shape)
+            # print("plotdata shape :", self.flux_audio.plotdata.shape)
+            if shift < self.plotdata.shape[0]:
+                self.plotdata = np.roll(self.plotdata,
+                                                   -shift,
+                                                   axis=0)
+                self.plotdata[-shift:, :] = data
+            else:
+                raise ValueError("Should not happen")
+        return self.nb_data
 
 
 def audio_callback(indata, _frames, _time, status):

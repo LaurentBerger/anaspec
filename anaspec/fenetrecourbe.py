@@ -192,29 +192,6 @@ class Plot(wx.Panel):
                 noverlap=self.flux_audio.overlap_spectro)
             self.init_axe_spectro()
 
-    def new_sample(self):
-        """ Réception de nouvelle données
-        du signal audio
-        """
-        while True:
-            try:
-                # https://docs.python.org/3/library/queue.html#queue.Queue.get_nowait
-                data = self.flux_audio.file_attente.get_nowait()
-            except queue.Empty:
-                break
-
-            shift = data.shape[0]
-            self.nb_data = self.nb_data + shift
-            # print("data shape :", data.shape)
-            # print("plotdata shape :", self.flux_audio.plotdata.shape)
-            if shift < self.flux_audio.plotdata.shape[0]:
-                self.flux_audio.plotdata = np.roll(self.flux_audio.plotdata,
-                                                   -shift,
-                                                   axis=0)
-                self.flux_audio.plotdata[-shift:, :] = data
-            else:
-                return None
-        return
         if not self.courbe_active:
             return None
         if self.nb_data > self.flux_audio.nb_ech_fenetre:
@@ -297,13 +274,13 @@ class PlotNotebook(wx.Panel):
             self.evt_process = True
             return
         self.clock = time.perf_counter()
-        self.page[0].new_sample()
-        if self.page[0].nb_data > self.page[0].flux_audio.nb_ech_fenetre:
+        nb_data = self.page[0].flux_audio.new_sample()
+        if nb_data > self.page[0].flux_audio.nb_ech_fenetre:
             self.page[0].nb_data = 0
-        for page in self.page:
-            if page.courbe_active:
-                page.draw_page()
-                page.canvas.draw()
+            for page in self.page:
+                if page.courbe_active:
+                    page.draw_page()
+                    page.canvas.draw()
         self.evt_process = True
 
     def draw_all_axis(self):
