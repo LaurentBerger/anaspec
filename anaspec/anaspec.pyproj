@@ -26,11 +26,9 @@
     <Compile Include="fenetrecourbe.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="fft_local_demo.py" />
     <Compile Include="fluxaudio.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="generation_signal.py" />
     <Compile Include="interface.py">
       <SubType>Code</SubType>
     </Compile>

@@ -269,8 +269,8 @@ class InterfaceAnalyseur(wx.Panel):
             w = wx.Window.FindWindowById(UPDATE_ECH)
             w.SetLabel(str(self.flux_audio.nb_ech_fenetre))
             self.flux_audio.courbe.page[0].courbe_active = True
-            self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
-            self.flux_audio.courbe.draw_page(None)
+            self.flux_audio.courbe.draw_all_axis()
+            # self.flux_audio.courbe.draw_page(None)
 
     def quitter(self, _):
         """
@@ -427,7 +427,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.flux_audio.set_frequency(int(float(chaine_freq)))
         self.update_spectro_interface()
         self.update_tfd_interface()
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
+        self.flux_audio.courbe.draw_all_axis()
 
     def ajouter_page_spectrogram(self, name="Spectrogram"):
         """
@@ -632,10 +632,10 @@ class InterfaceAnalyseur(wx.Panel):
         if id_fenetre not in self.dico_slider:
             return
         self.dico_slider[id_fenetre](val)
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.tfd_size)
+        self.flux_audio.courbe.draw_all_axis()
         r_upd = self.flux_audio.courbe.GetClientRect()
         self.flux_audio.courbe.Refresh(rect=r_upd)
-        self.flux_audio.courbe.draw_page(None)
+        # self.flux_audio.courbe.draw_page(None)
 
     def change_tfd_size(self, event):
         """
@@ -655,10 +655,10 @@ class InterfaceAnalyseur(wx.Panel):
         if w is not None:
             self.dico_slider[SLIDER_F_MAX_TFD](w.GetValue())
         if self.flux_audio.courbe.page[1].courbe_active:
-            self.flux_audio.courbe.etendue_axe(self.flux_audio.tfd_size)
+            self.flux_audio.courbe.draw_all_axis()
             r_upd = self.flux_audio.courbe.GetClientRect()
             self.flux_audio.courbe.Refresh(rect=r_upd)
-            self.flux_audio.courbe.draw_page(None)
+            # self.flux_audio.courbe.draw_page(None)
 
 
     def change_spectro_size(self, event):
@@ -679,10 +679,10 @@ class InterfaceAnalyseur(wx.Panel):
         if w is not None:
             self.dico_slider[SLIDER_F_MAX_SPECTRO](w.GetValue())
         if self.flux_audio.courbe.page[2].courbe_active:
-            self.flux_audio.courbe.etendue_axe(self.flux_audio.spectro_size)
+            self.flux_audio.courbe.draw_all_axis()
             r_upd = self.flux_audio.courbe.GetClientRect()
             self.flux_audio.courbe.Refresh(rect=r_upd)
-            self.flux_audio.courbe.draw_page(None)
+            #self.flux_audio.courbe.draw_page(None)
 
 
     def update_spectro_interface(self):
@@ -703,7 +703,7 @@ class InterfaceAnalyseur(wx.Panel):
         high = wx.Window.FindWindowById(SLIDER_F_MAX_TFD)
         if high:
             high.SetMax(self.flux_audio.Fe//2)
-        self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
+        self.flux_audio.courbe.draw_all_axis()
 
     def ajouter_bouton(self, bouton, ctrl, ma_grille, font, option=wx.EXPAND):
         bouton[0].SetFont(font)
@@ -755,8 +755,8 @@ class InterfaceAnalyseur(wx.Panel):
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             bouton.SetLabel(self.dico_label[id_fenetre][1])
             self.flux_audio.courbe.page[ind_page].courbe_active = True
-            self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
-            self.flux_audio.courbe.draw_page(None)
+            self.flux_audio.courbe.draw_all_axis()
+            # self.flux_audio.courbe.draw_page(None)
 
         else:
             print("DesActivation courbe")
@@ -793,7 +793,7 @@ class InterfaceAnalyseur(wx.Panel):
             self.flux_audio.set_frequency(int(float(chaine_freq)))
             self.set_window_size()
             self.set_time_length()
-            self.flux_audio.courbe.etendue_axe(self.flux_audio.nb_ech_fenetre)
+            self.flux_audio.courbe.draw_all_axis()
             if not self.flux_audio.open(self.idx_periph_in):
                 self.disable_item_check()
                 wx.MessageBox("Cannot opened input device : input disable",
