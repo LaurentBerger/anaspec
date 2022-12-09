@@ -20,7 +20,9 @@ import wx.lib.agw.aui as aui
 
 # pylint: disable=maybe-no-member
 EVENT_FFT = None
-PAGE_PLOT = None
+EVENT_SPECTRO = None
+PAGE_PLOT_FFT = None
+PAGE_PLOT_SPECTRO = None
 
 class CalculFFT(threading.Thread):
     """ calcul de la fft en utilisant un thread
@@ -36,8 +38,30 @@ class CalculFFT(threading.Thread):
         self.z = np.abs(self.z).real / self.Fe
         evt = EVENT_FFT(attr1="CalculFFT", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
-        if PAGE_PLOT:
-            wx.PostEvent(PAGE_PLOT, evt)
+        if PAGE_PLOT_FFT:
+            wx.PostEvent(PAGE_PLOT_FFT, evt)
+
+class CalculSpectrogram(threading.Thread):
+    """ calcul du spectrogramme en utilisant un thread
+    et envoie d'un événement en fin de calcul
+    """
+    def __init__(self, x, fe, win_size_spectro, overlap_spectro):
+        threading.Thread.__init__(self)
+        self.x = x.copy()
+        self.Fe = fe
+        self.win_size_spectro = win_size_spectro
+        self.overlap_spectro = overlap_spectro
+    
+    def run(self):
+        _, _, self.z = signal.spectrogram(
+                self.x,
+                self.Fe,
+                nperseg=self.win_size_spectro,
+                noverlap=self.overlap_spectro)
+        evt = EVENT_SPECTRO(attr1="CalculSpectrogram", attr2=0)
+        # Envoi de l'événement à la fenêtre chargée du tracé
+        if PAGE_PLOT_SPECTRO:
+            wx.PostEvent(PAGE_PLOT_SPECTRO, evt)
 
 
 class Plot(wx.Panel):
@@ -45,13 +69,18 @@ class Plot(wx.Panel):
     Fenetrage wx contenant un graphique matplotlib
     """
     def __init__(self, parent, f_audio, id_fenetre=-1, type_courbe='time'):
-        global EVENT_FFT, PAGE_PLOT
+        global EVENT_FFT, EVENT_SPECTRO, PAGE_PLOT_FFT, PAGE_PLOT_SPECTRO
         wx.Panel.__init__(self, parent, id=id_fenetre)
         if type_courbe == 'dft_modulus':
-            self.new_event, self.id_evt = wx.lib.newevent.NewEvent()
-            self.Bind(self.id_evt, self.update_axe_fft)
-            PAGE_PLOT = self
-            EVENT_FFT = self.new_event
+            self.new_event_fft, self.id_evt_fft = wx.lib.newevent.NewEvent()
+            self.Bind(self.id_evt_fft, self.update_axe_fft)
+            PAGE_PLOT_FFT = self
+            EVENT_FFT = self.new_event_fft
+        if type_courbe == 'spectrogram':
+            self.new_event_spectro, self.id_evt_spectro = wx.lib.newevent.NewEvent()
+            self.Bind(self.id_evt_spectro, self.update_axe_spectrogram)
+            PAGE_PLOT_SPECTRO = self
+            EVENT_SPECTRO = self.new_event_spectro
         self.flux_audio = f_audio
         self.type_courbe = type_courbe
         self.courbe_active = False
@@ -225,14 +254,13 @@ class Plot(wx.Panel):
             self.auto_adjust = True
             return self.lines
         if self.type_courbe == 'spectrogram':
-            _, _, spectro = signal.spectrogram(
-                self.flux_audio.plotdata[-self.flux_audio.spectro_size:, 0],
-                self.flux_audio.Fe,
-                nperseg=self.flux_audio.win_size_spectro,
-                noverlap=self.flux_audio.overlap_spectro)
-
-            psd = spectro[self.freq_ind_min:self.freq_ind_max, :]
-            self.image.set_data(psd)
+            self.thread_spectrogram = CalculSpectrogram(
+                    self.flux_audio.plotdata[-self.flux_audio.spectro_size:, 0],
+                    self.flux_audio.Fe,
+                    self.flux_audio.win_size_spectro,
+                    self.flux_audio.overlap_spectro
+                    )
+            self.thread_spectrogram.start()
             return self.image
 
     def update_axe_fft(self, _evt):
@@ -249,6 +277,12 @@ class Plot(wx.Panel):
         self.lines[0].set_xdata(val_x)
         self.lines[0].set_ydata(spec_selec)
         return self.lines
+
+    def update_axe_spectrogram(self, _evt):
+        self.spectro_audio = self.thread_spectrogram.z
+        psd = self.spectro_audio[self.freq_ind_min:self.freq_ind_max, :]
+        self.image.set_data(psd)
+        return self.image
 
 class PlotNotebook(wx.Panel):
     def __init__(self, parent, flux_a, id_fen=-1, evt_type=None):
