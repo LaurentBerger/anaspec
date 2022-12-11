@@ -24,7 +24,7 @@ class FluxAudio:
         global FLUX_AUDIO
         FLUX_AUDIO = self
         NEW_EVENT = n_evt
-        self.taille_buffer_signal = int(3*max(frequence_num))
+        self.taille_buffer_signal = int(10*freq)
         self.nb_ech_fenetre = fenetre # pour l'acquisition
         self.tfd_size = self.nb_ech_fenetre
         self.spectro_size = self.nb_ech_fenetre
@@ -39,7 +39,11 @@ class FluxAudio:
         self.plotdata = None
         self.mapping = None
         self.k_min = 0
-        self.k_max = self.tfd_size//2+1
+        self.k_max = self.tfd_size // 2 + 1
+        self.f_min = 0
+        self.f_max = self.tfd_size // 2 + 1
+        self.set_k_min(self.f_min)
+        self.set_k_max(self.f_max)
         self.f_min_spectro = 0
         self.f_max_spectro = self.Fe // 2
         self.win_size_spectro = self.spectro_size // 2
@@ -55,43 +59,73 @@ class FluxAudio:
     def set_tfd_size(self, val=None):
         if val is not None:
             self.tfd_size = val
+            self.set_k_min(self.set_f_min())
+            self.set_k_max(self.set_f_max())
         return self.tfd_size
 
-    def set_k_min(self, idx_min):
-        idx_min = int(idx_min / self.Fe * self.tfd_size)
-        if idx_min < self.k_max:
-            self.k_min = idx_min
+    def set_k_min(self, idx_min=None):
+        if idx_min is not None:
+            idx_min = int(idx_min / self.Fe * self.tfd_size)
+            if idx_min < self.k_max:
+                self.k_min = idx_min
+        return self.k_min
 
-    def set_k_max(self, idx_max):
+    def set_k_max(self, idx_max=None):
         idx_max = int(idx_max / self.Fe * self.tfd_size)
         if idx_max > self.k_min:
             self.k_max = idx_max
+        return self.k_max
 
-    def set_spectro_size(self, val):
+    def set_f_min(self, f_min=None):
+        if f_min is not None and 0 <= f_min <= self.Fe/2:
+            self.set_k_min(f_min)
+            self.f_min = f_min
+        return self.f_min
+
+    def set_f_max(self, f_max=None):
+        if f_max is not None and 0 <= f_max <= self.Fe/2:
+            self.set_k_max(f_max)
+            self.f_max = f_max
+        return self.f_max
+
+    def set_spectro_size(self, val=None):
         if val is not NONE:
             self.spectro_size = val
         return self.spectro_size
 
-    def set_f_min_spectro(self, f_min):
-        if f_min < self.f_max_spectro:
-            self.f_min_spectro = f_min
+    def set_f_min_spectro(self, f_min=None):
+        if f_min is not NONE:
+            if f_min < self.f_max_spectro:
+                self.f_min_spectro = f_min
+        return self.f_min_spectro
 
-    def set_f_max_spectro(self, f_max):
-        if f_max > self.f_min_spectro:
-            self.f_max_spectro = f_max
+    def set_f_max_spectro(self, f_max=None):
+        if f_max is not NONE:
+            if f_max > self.f_min_spectro:
+                self.f_max_spectro = f_max
+        return self.f_max_spectro
 
-    def set_win_size_spectro(self, taille):
-        self.win_size_spectro = taille
+    def set_win_size_spectro(self, taille=None):
+        if taille is not None:
+            self.win_size_spectro = taille
+        return self.win_size_spectro
 
-    def set_overlap_spectro(self, recou):
-        self.overlap_spectro = recou
+    def set_overlap_spectro(self, recou=None):
+        if recou is not None:
+            self.overlap_spectro = recou
+        return self.overlap_spectro
 
     def init_data_courbe(self):
+        self.taille_buffer_signal = int(10 * self.Fe)
         self.plotdata = np.ones((self.taille_buffer_signal, self.nb_canaux))
         self.mapping = [c-1 for c in range(self.nb_canaux)]
 
-    def set_frequency(self, freq_ech):
-        self.Fe = freq_ech
+    def set_frequency(self, freq_ech=None):
+        if freq_ech != None:
+            self.Fe = freq_ech
+            self.taille_buffer_signal = int(10 * self.Fe)
+            self.plotdata = np.ones((self.taille_buffer_signal, self.nb_canaux))
+        return self.Fe
 
     def set_window_size(self, nb_ech):
         self.nb_ech_fenetre = nb_ech
