@@ -29,9 +29,12 @@ SLIDER_T_END =8002
 
 SLIDER_FFT_BEG =8101
 SLIDER_FFT_END =8102
+BOUTON_COPY_FFT = 8103
 
 SLIDER_SPECTRO_BEG =8201
 SLIDER_SPECTRO_END =8202
+BOUTON_COPY_SPECTRO = 8203
+
 
 class CalculFFT(threading.Thread):
     """ calcul de la fft en utilisant un thread
@@ -84,6 +87,7 @@ class Plot(wx.Panel):
             case 'time':
                 self.id_slider_beg = SLIDER_T_BEG
                 self.id_slider_end = SLIDER_T_END
+                self.id_bouton_copie =  None
             case 'dft_modulus':
                 self.id_slider_beg = SLIDER_FFT_BEG
                 self.id_slider_end = SLIDER_FFT_END
@@ -91,6 +95,7 @@ class Plot(wx.Panel):
                 self.Bind(self.id_evt_fft, self.update_axe_fft)
                 PAGE_PLOT_FFT = self
                 EVENT_FFT = self.new_event_fft
+                self.id_bouton_copie =  BOUTON_COPY_FFT
             case 'spectrogram':
                 self.id_slider_beg = SLIDER_SPECTRO_BEG
                 self.id_slider_end = SLIDER_SPECTRO_END
@@ -98,6 +103,7 @@ class Plot(wx.Panel):
                 self.Bind(self.id_evt_spectro, self.update_axe_spectrogram)
                 PAGE_PLOT_SPECTRO = self
                 EVENT_SPECTRO = self.new_event_spectro
+                self.id_bouton_copie =  BOUTON_COPY_SPECTRO
                 
         self.flux_audio = f_audio
         self.type_courbe = type_courbe
@@ -163,14 +169,30 @@ class Plot(wx.Panel):
         presentation_status = wx.BoxSizer(wx.HORIZONTAL)
         presentation_fenetre.Add(self.canvas, 1, wx.EXPAND)
         presentation_status.Add(self.toolbar, 0)
-        self.info_curseur = wx.StaticText(self, label="")
+        if self.id_bouton_copie is not None:
+            bouton = wx.Button(self, id=self.id_bouton_copie, label='Sync. Index')
+            bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+            bouton.Bind(wx.EVT_BUTTON, self.synchronize_index, bouton)
+            presentation_status.Add(bouton,0, wx.CENTER)
+        self.info_curseur = wx.StaticText(self, label=100 * " ")
         self.info_curseur.SetFont(self.font)
-        presentation_status.Add(self.info_curseur,wx.EXPAND)
+        presentation_status.Add(self.info_curseur,0, wx.CENTER)
         presentation_fenetre.Add(presentation_status)
         self.canvas.mpl_connect('motion_notify_event', self.UpdateCurseur)
         self.SetSizer(presentation_fenetre)
         self.tps = 0
         self.init_axe()
+
+    def synchronize_index(self, _evt):
+        tps_fin = self.flux_audio.courbe.get_t_end('time')
+        if tps_fin is not None:
+            self.t_end = tps_fin
+            self.slider_t_end.SetValue(self.t_end)
+        tps_beg = self.flux_audio.courbe.get_t_beg('time')
+        if tps_beg is not None:
+            self.t_beg = tps_beg
+            self.slider_t_beg.SetValue(self.t_beg)
+        self.maj_limite_slider()
 
     def maj_limite_slider(self):
         self.slider_t_end.SetMax(self.flux_audio.taille_buffer_signal)
@@ -204,14 +226,14 @@ class Plot(wx.Panel):
                         idx = int(np.round(x))
                         a = self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre+idx,:]
                         texte = [format(v,".3e") for v in a ]
-                        self.info_curseur.SetLabel("Ech= " + str(idx) + "(s)  y=" + '/'.join(texte))
+                        self.info_curseur.SetLabel("Ech= " + str(idx) + " y=" + '/'.join(texte))
                 case 'dft_modulus':
                      if self.flux_audio.plotdata is not None and self.fft_audio is not None:
                         idx = int(np.round(self.flux_audio.tfd_size * x /self.flux_audio.Fe))
                         if 0 <= idx < self.flux_audio.tfd_size:
                             a = self.fft_audio[idx]
                             texte = "f= " + format(idx * self.flux_audio.Fe / self.flux_audio.tfd_size, ".2e") + "(Hz)  module=" + format(a,".3e")
-                            self.info_curseur.SetLabel(texte)
+                            self.info_curseur.SetLabel(10 * " " + texte)
 
     def init_axe_time(self):
         plotdata = self.flux_audio.plotdata
@@ -410,14 +432,27 @@ class PlotNotebook(wx.Panel):
                     page.canvas.draw()
         self.evt_process = True
 
-    def maj_page(self, nom_page):
+    def maj_page(self, page_name):
         """ tracé de la courbe associé à l'onglet
         """
 
         for page in self.page:
-            if page.courbe_active and page.type_courbe == nom_page:
+            if page.courbe_active and page.type_courbe == page_name:
                 page.draw_page()
                 page.canvas.draw()
+
+    def get_t_beg(self, page_name):
+        for page in self.page:
+            if page.type_courbe == page_name:
+                return page.t_beg
+        return None
+
+    def get_t_end(self, page_name):
+        for page in self.page:
+            if page.type_courbe == page_name:
+                return page.t_end
+        return None        
+
 
     def maj_limite_slider(self):
         for page in self.page:

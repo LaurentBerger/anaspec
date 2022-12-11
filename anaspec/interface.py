@@ -479,24 +479,6 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte = wx.StaticText(page, label="")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
-        st_texte = wx.StaticText(page, label="Input signal size for spectrogram")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
-        st_texte = wx.Slider(page,
-                             id=SLIDER_SPECTRO_SIZE,
-                             value=MIN_SPECTRO_SIZE,
-                             minValue=MIN_SPECTRO_SIZE,
-                             maxValue=self.flux_audio.taille_buffer_signal,
-                             style=style_texte,
-                             name="SIZE_SPECTRO")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        st_texte.Bind(wx.EVT_SCROLL_CHANGED,
-                      self.change_spectro_size,
-                      st_texte,
-                      SLIDER_SPECTRO_SIZE)
-        self.dico_slider[SLIDER_SPECTRO_SIZE] = (self.flux_audio.set_spectro_size, 'spectrogram')
-
-
         st_texte = wx.StaticText(page, label="Low frequency (Hz)")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
@@ -700,13 +682,14 @@ class InterfaceAnalyseur(wx.Panel):
         """
         réglage de la glissière tfd_size 
         avec mise à jour de la sélection des fréquences
+        OBSOLETE
         """
         obj = event.GetEventObject()
         val = obj.GetValue()
         id_fenetre = event.GetId()
         if id_fenetre not in self.dico_slider:
             return
-        self.dico_slider[SLIDER_SPECTRO_SIZE][0](val)
+        self.dico_slider[SLIDER_SPECTRO_SIZE][0](slef.end - self.beg)
         w = wx.Window.FindWindowById(SLIDER_F_MIN_SPECTRO)
         if w is not None:
             self.dico_slider[SLIDER_F_MIN_SPECTRO][0](w.GetValue())

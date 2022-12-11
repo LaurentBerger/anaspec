@@ -41,7 +41,7 @@ class FluxAudio:
         self.k_min = 0
         self.k_max = self.tfd_size // 2 + 1
         self.f_min = 0
-        self.f_max = self.tfd_size // 2 + 1
+        self.f_max = self.Fe // 2 
         self.set_k_min(self.f_min)
         self.set_k_max(self.f_max)
         self.f_min_spectro = 0
