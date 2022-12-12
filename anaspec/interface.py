@@ -262,13 +262,13 @@ class InterfaceAnalyseur(wx.Panel):
                 return
             nb_ech = min(son.shape[0], self.flux_audio.plotdata.shape[0])
             if len(son.shape) == 1:
-                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] = son[:nb_ech]
+                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] += son[:nb_ech]
             else:
-                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] = son[:nb_ech,0]
+                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] += son[:nb_ech,0]
                 if son.shape[1] != self.flux_audio.plotdata.shape[1]:
                     wx.MessageBox("Channel number are not equal. First channel uses", "Warning", wx.ICON_WARNING)
                 elif son.shape[1] == 2:
-                    self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0]-nb_ech:,1] = son[:nb_ech,1] 
+                    self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0]-nb_ech:,1] += son[:nb_ech,1] 
             # self.flux_audio.nb_ech_fenetre = nb_ech 
             # wx.MessageBox("Update sampling modified\n New value "+str(nb_ech), "Warning", wx.ICON_WARNING)
             # w = wx.Window.FindWindowById(UPDATE_ECH)
@@ -529,7 +529,6 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte.Bind(wx.EVT_SCROLL_CHANGED,
                       self.change_slider,
                       st_texte,
-
                       SLIDER_WINDOW_SIZE_SPECTRO)
         self.dico_slider[SLIDER_WINDOW_SIZE_SPECTRO] = \
             (self.flux_audio.set_win_size_spectro, 'spectrogram')
@@ -689,7 +688,6 @@ class InterfaceAnalyseur(wx.Panel):
         id_fenetre = event.GetId()
         if id_fenetre not in self.dico_slider:
             return
-        self.dico_slider[SLIDER_SPECTRO_SIZE][0](slef.end - self.beg)
         w = wx.Window.FindWindowById(SLIDER_F_MIN_SPECTRO)
         if w is not None:
             self.dico_slider[SLIDER_F_MIN_SPECTRO][0](w.GetValue())

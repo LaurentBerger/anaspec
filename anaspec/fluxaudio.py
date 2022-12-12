@@ -71,9 +71,10 @@ class FluxAudio:
         return self.k_min
 
     def set_k_max(self, idx_max=None):
-        idx_max = int(idx_max / self.Fe * self.tfd_size)
-        if idx_max > self.k_min:
-            self.k_max = idx_max
+        if idx_max is not None:
+            idx_max = int(idx_max / self.Fe * self.tfd_size)
+            if idx_max > self.k_min:
+                self.k_max = idx_max
         return self.k_max
 
     def set_f_min(self, f_min=None):
@@ -117,14 +118,14 @@ class FluxAudio:
 
     def init_data_courbe(self):
         self.taille_buffer_signal = int(10 * self.Fe)
-        self.plotdata = np.ones((self.taille_buffer_signal, self.nb_canaux))
+        self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
         self.mapping = [c-1 for c in range(self.nb_canaux)]
 
     def set_frequency(self, freq_ech=None):
         if freq_ech != None:
             self.Fe = freq_ech
             self.taille_buffer_signal = int(10 * self.Fe)
-            self.plotdata = np.ones((self.taille_buffer_signal, self.nb_canaux))
+            self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
         return self.Fe
 
     def set_window_size(self, nb_ech):

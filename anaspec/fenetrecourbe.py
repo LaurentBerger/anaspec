@@ -30,6 +30,7 @@ SLIDER_T_END =8002
 SLIDER_FFT_BEG =8101
 SLIDER_FFT_END =8102
 BOUTON_COPY_FFT = 8103
+BOUTON_NORMALISER = 8104
 
 SLIDER_SPECTRO_BEG =8201
 SLIDER_SPECTRO_END =8202
@@ -51,6 +52,7 @@ class CalculFFT(threading.Thread):
         evt = EVENT_FFT(attr1="CalculFFT", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
         if PAGE_PLOT_FFT:
+            PAGE_PLOT_FFT.file_attente.put(self.z.copy())
             wx.PostEvent(PAGE_PLOT_FFT, evt)
 
 class CalculSpectrogram(threading.Thread):
@@ -73,6 +75,7 @@ class CalculSpectrogram(threading.Thread):
         evt = EVENT_SPECTRO(attr1="CalculSpectrogram", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
         if PAGE_PLOT_SPECTRO:
+            PAGE_PLOT_SPECTRO.file_attente.put(self.z.copy())
             wx.PostEvent(PAGE_PLOT_SPECTRO, evt)
 
 
@@ -83,11 +86,13 @@ class Plot(wx.Panel):
     def __init__(self, parent, f_audio, id_fenetre=-1, type_courbe='time'):
         global EVENT_FFT, EVENT_SPECTRO, PAGE_PLOT_FFT, PAGE_PLOT_SPECTRO
         wx.Panel.__init__(self, parent, id=id_fenetre)
+        self.file_attente = queue.Queue()
         match type_courbe:
             case 'time':
                 self.id_slider_beg = SLIDER_T_BEG
                 self.id_slider_end = SLIDER_T_END
                 self.id_bouton_copie =  None
+                self.id_bouton_normaliser =  None
             case 'dft_modulus':
                 self.id_slider_beg = SLIDER_FFT_BEG
                 self.id_slider_end = SLIDER_FFT_END
@@ -96,6 +101,7 @@ class Plot(wx.Panel):
                 PAGE_PLOT_FFT = self
                 EVENT_FFT = self.new_event_fft
                 self.id_bouton_copie =  BOUTON_COPY_FFT
+                self.id_bouton_normaliser =  BOUTON_NORMALISER
             case 'spectrogram':
                 self.id_slider_beg = SLIDER_SPECTRO_BEG
                 self.id_slider_end = SLIDER_SPECTRO_END
@@ -104,6 +110,7 @@ class Plot(wx.Panel):
                 PAGE_PLOT_SPECTRO = self
                 EVENT_SPECTRO = self.new_event_spectro
                 self.id_bouton_copie =  BOUTON_COPY_SPECTRO
+                self.id_bouton_normaliser =  None
                 
         self.flux_audio = f_audio
         self.type_courbe = type_courbe
@@ -120,6 +127,7 @@ class Plot(wx.Panel):
         self.val_x = None
         self.t_beg = 0
         self.t_end = self.flux_audio.nb_ech_fenetre
+        self.pas = 1
         self.font = wx.Font(10,
                            wx.FONTFAMILY_DEFAULT,
                            wx.FONTSTYLE_NORMAL,
@@ -174,6 +182,11 @@ class Plot(wx.Panel):
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.Bind(wx.EVT_BUTTON, self.synchronize_index, bouton)
             presentation_status.Add(bouton,0, wx.CENTER)
+        if self.id_bouton_normaliser is not None:
+            bouton = wx.Button(self, id=self.id_bouton_normaliser, label='Normalize')
+            bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+            bouton.Bind(wx.EVT_BUTTON, self.normaliser, bouton)
+            presentation_status.Add(bouton,0, wx.CENTER)
         self.info_curseur = wx.StaticText(self, label=100 * " ")
         self.info_curseur.SetFont(self.font)
         presentation_status.Add(self.info_curseur,0, wx.CENTER)
@@ -181,6 +194,7 @@ class Plot(wx.Panel):
         self.canvas.mpl_connect('motion_notify_event', self.UpdateCurseur)
         self.SetSizer(presentation_fenetre)
         self.tps = 0
+        self.thread_fft =  None
         self.init_axe()
 
     def synchronize_index(self, _evt):
@@ -193,6 +207,9 @@ class Plot(wx.Panel):
             self.t_beg = tps_beg
             self.slider_t_beg.SetValue(self.t_beg)
         self.maj_limite_slider()
+
+    def normaliser(self, _evt):
+        self.init_axe()
 
     def maj_limite_slider(self):
         self.slider_t_end.SetMax(self.flux_audio.taille_buffer_signal)
@@ -215,7 +232,7 @@ class Plot(wx.Panel):
         self.init_axe()
         r_upd = self.GetClientRect()
         self.Refresh(rect=r_upd)
-        self.flux_audio.courbe.draw_page(None)
+        # self.flux_audio.courbe.draw_page(None)
 
     def UpdateCurseur(self, event):
         if event.inaxes:
@@ -249,18 +266,17 @@ class Plot(wx.Panel):
     def init_axe_fft(self):
         self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
         tfd_size = self.flux_audio.set_tfd_size()
-        val_x = np.arange(self.flux_audio.k_min, self.flux_audio.k_max) *\
-                self.flux_audio.Fe / tfd_size
-        spec_selec = self.fft_audio[self.flux_audio.k_min:
-                                    self.flux_audio.k_max]
+        ratio = self.flux_audio.Fe / tfd_size
+        val_x = np.arange(self.flux_audio.set_k_min(), self.flux_audio.set_k_max(), self.pas)
+        val_x = val_x * ratio
+        spec_selec = self.fft_audio[self.flux_audio.set_k_min():
+                                    self.flux_audio.set_k_max():self.pas]
         self.max_module = spec_selec.max()
         self.lines = self.graphique.plot(val_x, spec_selec)
-        self.graphique.axis((self.flux_audio.k_min * self.flux_audio.Fe /
-                                tfd_size,
-                                self.flux_audio.k_max*self.flux_audio.Fe /
-                                tfd_size,
-                                0,
-                                self.max_module))
+        self.graphique.axis((self.flux_audio.set_k_min() * ratio,
+                             self.flux_audio.set_k_max() * ratio,
+                             0,
+                             1.1 * self.max_module))
         self.graphique.legend(['channel ' + str(c)
                                 for c in range(self.flux_audio.nb_canaux)],
                                 loc='upper right',
@@ -320,15 +336,15 @@ class Plot(wx.Panel):
         elif self.type_courbe == 'dft_modulus':
             self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
             tfd_size = self.flux_audio.set_tfd_size()
-            self.fft_audio = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
-            self.fft_audio = np.abs(self.fft_audio).real / self.flux_audio.Fe
+            z = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
+            self.fft_audio = np.abs(z).real / self.flux_audio.Fe
             self.init_axe_fft()
         elif self.type_courbe == 'spectrogram':
             spectro_size = self.t_end - self.t_beg # self.flux_audio.spectro_size
             self.f_spectro, self.tps_spectro, self.sxx_spectro = signal.spectrogram(
                 plotdata[self.t_beg:self.t_end, 0],
                 self.flux_audio.Fe,
-                window=(self.flux_audio.type_window),
+                # window=(self.flux_audio.type_window),
                 nperseg=self.flux_audio.win_size_spectro,
                 noverlap=self.flux_audio.overlap_spectro)
             self.init_axe_spectro()
@@ -360,7 +376,7 @@ class Plot(wx.Panel):
             return self.lines
         if self.type_courbe == 'spectrogram':
             self.thread_spectrogram = CalculSpectrogram(
-                    self.flux_audio.plotdata[-self.flux_audio.spectro_size:, 0],
+                    self.flux_audio.plotdata[self.t_beg:self.t_end:, 0],
                     self.flux_audio.Fe,
                     self.flux_audio.win_size_spectro,
                     self.flux_audio.overlap_spectro
@@ -369,25 +385,33 @@ class Plot(wx.Panel):
             return self.image
 
     def update_axe_fft(self, _evt):
-        self.fft_audio = self.thread_fft.z
-        if self.auto_adjust:
-            max_fft = np.max(self.fft_audio[1:])
-            if max_fft > self.max_module:
-                self.max_module = max_fft
-        spec_selec = self.fft_audio[self.flux_audio.k_min:
-                                    self.flux_audio.k_max]
-        val_x = np.arange(self.flux_audio.k_min,
-                            self.flux_audio.k_max) *\
-            self.flux_audio.Fe / self.flux_audio.tfd_size
-        self.lines[0].set_xdata(val_x)
-        self.lines[0].set_ydata(spec_selec)
-        return self.lines
+        try:
+            self.fft_audio = self.file_attente.get_nowait()
+            if self.auto_adjust:
+                max_fft = np.max(self.fft_audio[1:])
+                if max_fft > self.max_module:
+                    self.max_module = max_fft
+                spec_selec = self.fft_audio[self.flux_audio.set_k_min():
+                                            self.flux_audio.set_k_max():self.pas]
+                val_x = np.arange(self.flux_audio.set_k_min(),
+                                    self.flux_audio.set_k_max(), self.pas) *\
+                    self.flux_audio.Fe / self.flux_audio.tfd_size
+            # self.lines[0].set_xdata(val_x)
+            self.lines[0].set_ydata(spec_selec)
+            return self.lines
+        except queue.Empty:
+            print("Should not happen")
+        return None
 
     def update_axe_spectrogram(self, _evt):
-        self.spectro_audio = self.thread_spectrogram.z
-        psd = self.spectro_audio[self.freq_ind_min:self.freq_ind_max, :]
-        self.image.set_data(psd)
-        return self.image
+        try:
+            self.spectro_audio = self.file_attente.get_nowait()
+            psd = self.spectro_audio[self.freq_ind_min:self.freq_ind_max, :]
+            self.image.set_data(psd)
+            return self.image
+        except queue.Empty:
+            print("Should not happen")
+        return None
 
 class PlotNotebook(wx.Panel):
     def __init__(self, parent, flux_a, id_fen=-1, evt_type=None):
