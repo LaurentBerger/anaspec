@@ -242,7 +242,7 @@ class InterfaceAnalyseur(wx.Panel):
         surchage de close pour interdire
         la fermeture des onglets
         """
-        wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
+        wx.MessageBox("Cannot be closed. Use File menu to quit", "Warning", wx.ICON_WARNING)
         evt.Veto()
 
     def open_wav(self, _):

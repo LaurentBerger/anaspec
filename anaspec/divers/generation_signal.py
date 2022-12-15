@@ -69,6 +69,7 @@ class InterfaceGeneration(wx.Panel):
 
         self.parent = parent
         self.val_Fe = ['11025', '22050', '32000', '44100', '48000', '96000']
+        self.amplitude = 0.5
         self._f0_t0 = 0
         self._f1_t1 = 440
         self._f0_sinus = 1000
@@ -80,10 +81,10 @@ class InterfaceGeneration(wx.Panel):
         self.Fe = 22050
         self.t_ech = None
         self.dico_slider = {0: None}
-        self._duree_chirp = 1
-        self._duree_sinus = 1
-        self._duree_square = 1
-        self._duree_gaussian = 1
+        self._duree_chirp = 1000
+        self._duree_sinus = 1000
+        self._duree_square = 1000
+        self._duree_gaussian = 1000
         self.methode = None
         self.choix_Fe_sinus = None
         self.choix_Fe_chirp =  None
@@ -227,7 +228,7 @@ class InterfaceGeneration(wx.Panel):
         self.dico_slider[id_fenetre](val)
 
     def maj_param_chirp(self):
-        self.t_ech = np.arange(0,self._duree_chirp,1/self.Fe)
+        self.t_ech = np.arange(0,self._duree_chirp/1000,1/self.Fe)
         idx =  self.choix_Fe_chirp.GetCurrentSelection()
         self.Fe = float(self.choix_Fe_chirp.GetString(idx))
         idx =  self.choix_chirp.GetCurrentSelection()
@@ -237,9 +238,10 @@ class InterfaceGeneration(wx.Panel):
         try:
             self.signal = scipy.signal.chirp(self.t_ech, 
                                              self.f0_t0(),
-                                             self._duree_chirp,
+                                             self._duree_chirp/1000,
                                              self.f1_t1(),
                                              method=self.methode)
+            self.signal *= self.amplitude
             return True
         except ValueError as err:
             self.err_msg = str(err)
@@ -261,8 +263,9 @@ class InterfaceGeneration(wx.Panel):
         """
         self.maj_param_chirp()
         if self.chirp():
-            nom_fichier = "chirp_" + self.methode +  "_"
-            nom_fichier = nom_fichier + str(self.duree_chirp()) + "s_"
+            nom_fichier = "chirp_" + str(self.Fe) + "_"
+            nom_fichier = nom_fichier + self.methode +  "_"
+            nom_fichier = nom_fichier + str(self.duree_chirp()) + "ms_"
             nom_fichier = nom_fichier + str(self.f0_t0()) + "_" + str(self.f1_t1())
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
@@ -337,7 +340,7 @@ class InterfaceGeneration(wx.Panel):
                              id=SLIDER_DUREE_CHIRP,
                              value=self.duree_chirp(),
                              minValue=0,
-                             maxValue=2**18 // self.Fe,
+                             maxValue=10000,
                              style=style_texte,
                              name="Duration")
         self.dico_slider[SLIDER_DUREE_CHIRP] = self.duree_chirp
@@ -346,7 +349,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_CHIRP)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Chirp duration (s)")
+        st_texte = wx.StaticText(page, label="Chirp duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         bouton = wx.Button(page, id=BOUTON_SAVE_CHIRP)
@@ -367,10 +370,11 @@ class InterfaceGeneration(wx.Panel):
     def maj_param_gaussian(self):
         idx =  self.choix_Fe_gaussian.GetCurrentSelection()
         self.Fe = float(self.choix_Fe_gaussian.GetString(idx))
-        self.t_ech = np.arange(-self._duree_gaussian/2,self._duree_gaussian/2,1/self.Fe)
+        self.t_ech = np.arange(-self._duree_gaussian/2000,self._duree_gaussian/2000,1/self.Fe)
 
     def signal_gaussian(self):
         self.signal = scipy.signal.gausspulse(self.t_ech, fc=self.f0_gaussian(), bw=self._ratio_gaussian/1000)
+        self.signal *= self.amplitude
         return True
 
     def save_gaussian(self, event):
@@ -379,8 +383,8 @@ class InterfaceGeneration(wx.Panel):
         """
         self.maj_param_gaussian()
         if self.signal_gaussian():
-            nom_fichier = "gaussian_" 
-            nom_fichier = nom_fichier + str(self.duree_gaussian()) + "s_"
+            nom_fichier = "gaussian_"+ str(self.Fe) + "_"
+            nom_fichier = nom_fichier + str(self.duree_gaussian()) + "ms_"
             nom_fichier = nom_fichier + str(self.f0_gaussian()) + "Hz_"
             nom_fichier = nom_fichier + str(self.ratio_gaussian()) 
             nom_fichier = nom_fichier + ".wav"
@@ -443,7 +447,7 @@ class InterfaceGeneration(wx.Panel):
                            id=SLIDER_DUREE_GAUSSIAN,
                            value=self.duree_gaussian(),
                            minValue=0,
-                           maxValue=2**18 // self.Fe,
+                           maxValue=10000,
                            style=style_texte,
                            name="Duration")
         self.dico_slider[SLIDER_DUREE_GAUSSIAN] = self.duree_gaussian
@@ -452,7 +456,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_GAUSSIAN)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Square wave duration (s)")
+        st_texte = wx.StaticText(page, label="Square wave duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
@@ -491,12 +495,13 @@ class InterfaceGeneration(wx.Panel):
     def maj_param_sinus(self):
         idx =  self.choix_Fe_sinus.GetCurrentSelection()
         self.Fe = float(self.choix_Fe_sinus.GetString(idx))
-        self.t_ech = np.arange(0,self._duree_sinus,1/self.Fe)
+        self.t_ech = np.arange(0,self._duree_sinus/1000,1/self.Fe)
 
     def sinus(self):
         self.signal = np.sin(self.t_ech * 2 * np.pi * self.f0_sinus())
         if self.sinus_reference == True:
             self.signal = self.signal + np.sin(self.t_ech * 2 * np.pi * 1000)
+        self.signal *= self.amplitude
         return True
 
     def play_sinus(self, event):
@@ -515,8 +520,8 @@ class InterfaceGeneration(wx.Panel):
         """
         self.maj_param_sinus()
         if self.sinus():
-            nom_fichier = "sinus_"
-            nom_fichier = nom_fichier + str(self.duree_sinus()) + "s_"
+            nom_fichier = "sinus_" + str(self.Fe) + "_"
+            nom_fichier = nom_fichier + str(self.duree_sinus()) + "ms_"
             nom_fichier = nom_fichier + str(self.f0_sinus())
             nom_fichier = nom_fichier + ".wav"
             with soundfile.SoundFile(nom_fichier,
@@ -576,7 +581,7 @@ class InterfaceGeneration(wx.Panel):
                            id=SLIDER_DUREE_SINUS,
                            value=self.duree_sinus(),
                            minValue=0,
-                           maxValue=2**18 // self.Fe,
+                           maxValue=10000,
                            style=style_texte,
                            name="Duration")
         self.dico_slider[SLIDER_DUREE_SINUS] = self.duree_sinus
@@ -585,7 +590,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_SINUS)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Sinusoide duration (s)")
+        st_texte = wx.StaticText(page, label="Sinusoide duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
         case = wx.CheckBox(page, -1, 'Add 1000Hz frequency reference')
         case.SetValue(self.sinus_reference)
@@ -616,10 +621,11 @@ class InterfaceGeneration(wx.Panel):
     def maj_param_square(self):
         idx =  self.choix_Fe_square.GetCurrentSelection()
         self.Fe = int(float(self.choix_Fe_square.GetString(idx)))
-        self.t_ech = np.arange(0,self._duree_square,1/self.Fe)
+        self.t_ech = np.arange(0,self._duree_square/1000,1/self.Fe)
 
     def signal_carre(self):
         self.signal = scipy.signal.square(self.t_ech * 2 * np.pi * self.f0_square(), self._ratio_square/100)
+        self.signal *= self.amplitude
         return True
 
     def save_square(self, event):
@@ -628,8 +634,8 @@ class InterfaceGeneration(wx.Panel):
         """
         self.maj_param_square()
         if self.signal_carre():
-            nom_fichier = "square_" 
-            nom_fichier = nom_fichier + str(self.duree_square()) + "s_"
+            nom_fichier = "square_" + str(self.Fe) + "_"
+            nom_fichier = nom_fichier + str(self.duree_square()) + "ms_"
             nom_fichier = nom_fichier + str(self.f0_square()) + "Hz_"
             nom_fichier = nom_fichier + str(self.ratio_square()) 
             nom_fichier = nom_fichier + ".wav"
@@ -692,7 +698,7 @@ class InterfaceGeneration(wx.Panel):
                            id=SLIDER_DUREE_SQUARE,
                            value=self.duree_square(),
                            minValue=0,
-                           maxValue=2**18 // self.Fe,
+                           maxValue=10000,
                            style=style_texte,
                            name="Duration")
         self.dico_slider[SLIDER_DUREE_SQUARE] = self.duree_square
@@ -701,7 +707,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_SQUARE)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Square wave duration (s)")
+        st_texte = wx.StaticText(page, label="Square wave duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
