@@ -238,6 +238,20 @@ class Plot(wx.Panel):
         self.Refresh(rect=r_upd)
         # self.flux_audio.courbe.draw_page(None)
     
+    def localise_freq(self, x, y):
+        idx_freq = self.flux_audio.Fe / self.flux_audio.tfd_size
+        idx_min, idx_max = self.graphique.get_xlim()
+        y_min, y_max = self.graphique.get_ylim()
+        print(idx_min, idx_max, x, y)
+        idx_min = int(np.round(idx_min /idx_freq))
+        idx_max = int(np.round(idx_max /idx_freq))
+        idx = np.argmin(np.abs(self.val_x-x))
+        n_min = max(idx - 1000, idx_min)
+        n_max = min(idx + 1000, idx_max)
+        idx = np.argmin(np.abs(y - self.fft_audio[n_min : n_max]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
+        return idx
+
+
     def UpdateCurseur(self, event):
         if event.inaxes:
             idx_freq = self.flux_audio.Fe / self.flux_audio.tfd_size
@@ -254,46 +268,54 @@ class Plot(wx.Panel):
                             self.info_curseur.SetLabel("Ech= " + str(idx) + " y=" + '/'.join(texte))
                     case 'dft_modulus':
                          if self.flux_audio.plotdata is not None and self.fft_audio is not None:
-                            idx = int(np.round(x /idx_freq))
-                            idx_min, idx_max = self.graphique.get_xlim()
-                            idx_min = int(np.round(idx_min /idx_freq))
-                            idx_max = int(np.round(idx_max /idx_freq))
-                            if 0 <= idx < self.flux_audio.tfd_size // 2:
-                                n_min = max(idx - 1000, idx_min)
-                                n_max = min(idx + 1000, idx_max)
-                                idx = np.argmin(np.abs(y - self.fft_audio[n_min : n_max])) + n_min
-                                a = self.fft_audio[idx]
-                                texte = "f= " + format(idx * idx_freq, ".6e") + "(Hz)  module=" + format(a,".6e")
-                                self.info_curseur.SetLabel(10 * " " + texte)
+                            idx = self.localise_freq(x, y)
+                            a = self.fft_audio[idx]
+                            texte = "f= " + format(idx * idx_freq, ".6e") + "(Hz)  module=" + format(a,".6e")
+                            self.info_curseur.SetLabel(10 * " " + texte)
+            if event.key == 'alt' and type == 0:
+                print('Selected frequency ', format(self.val_freq[idx],'.5e'), "Hz")
+                print('Module ', format(self.val_mod[idx], '.4e')," u.a.")
+                bp_inf = np.where(self.val_mod[idx+1:self.N//2:-1] < self.val_mod[idx]/2)
+                if bp_inf[0].shape[0] > 0:
+                    idx_inf = idx + 1 -bp_inf[0][0]
+                else:
+                    idx_inf =  self.N//2
+                bp_sup = np.where(self.val_mod[idx:] < self.val_mod[idx]/2)
+                print(bp_sup)
+                print(bp_inf)
+                if bp_sup[0].shape[0] > 0:
+                    idx_sup = bp_sup[0][0]+idx
+                else:
+                    idx_sup =  self.N
+                print(idx, idx_inf, idx_sup)
+                print('Width at height ', format(self.val_mod[idx]/2, '.4e'), end='')
+                print('BP = ', self.val_freq[idx_sup] - self.val_freq[idx_inf], 'Hz', end='')
+                print('Uncertainty  ', format(2 * self.Fe/self.N, '.4e'), "Hz")
+                if self.bp_line:
+                    self.bp_line.remove()
+                self.bp_line = graphe[0].hlines(self.val_mod[idx]/2, self.val_freq[idx_inf], self.val_freq[idx_sup])
             if event.key == 'control' and self.type_courbe == 'dft_modulus':
                 if self.flux_audio.plotdata is not None and self.fft_audio is not None:
-                    idx = int(np.round(x /idx_freq))
-                    idx_min, idx_max = self.graphique.get_xlim()
-                    idx_min = int(np.round(idx_min /idx_freq))
-                    idx_max = int(np.round(idx_max /idx_freq))
-                    if 0 <= idx < self.flux_audio.tfd_size // 2:
-                        n_min = max(idx - 1000, idx_min)
-                        n_max = min(idx + 1000, idx_max)
-                        idx = np.argmin(np.abs(y - self.fft_audio[n_min : n_max])) + n_min
-                        print('Fréquence retenue ', format(idx * idx_freq,'.5e'), "Hz")
-                        pos_peak, _ = signal.find_peaks( self.fft_audio, height= self.fft_audio[idx]/2)
-                        nb_peak = 0
-                        for p in pos_peak:                   
-                            if p > 0 and p < self.flux_audio.tfd_size // 2:
-                                print('F ', format(p * idx_freq,'.5e'), "Hz",
-                                        'M ', format(self.fft_audio[p], '.4e')," u.a.")
-                                nb_peak = nb_peak + 1
-                                if nb_peak>100:
-                                    print("Number of peaks is greater than 100")
-                                    print("Stop iterating")
-                                    break
-                        if nb_peak <= 100:
-                            pos = np.logical_and(pos_peak > 0, pos_peak < self.flux_audio.tfd_size // 2)
-                            if self.peak_mark is not None:
-                                for line in self.peak_mark:
-                                    line.remove()
-                            self.peak_mark = self.graphique.plot(pos_peak[pos] * idx_freq, self.fft_audio[pos_peak[pos]], "x")
-                            self.canvas.draw()
+                    idx = self.localise_freq(x, y)
+                    print('Selected frequency  ', format(idx * idx_freq,'.5e'), "Hz")
+                    pos_peak, _ = signal.find_peaks( self.fft_audio, height= self.fft_audio[idx]/2)
+                    nb_peak = 0
+                    for p in pos_peak:                   
+                        if p > 0 and p < self.flux_audio.tfd_size // 2:
+                            print('F ', format(p * idx_freq,'.5e'), "Hz",
+                                    'M ', format(self.fft_audio[p], '.4e')," u.a.")
+                            nb_peak = nb_peak + 1
+                            if nb_peak>100:
+                                print("Number of peaks is greater than 100")
+                                print("Stop iterating")
+                                break
+                    if nb_peak <= 100:
+                        pos = np.logical_and(pos_peak > 0, pos_peak < self.flux_audio.tfd_size // 2)
+                        if self.peak_mark is not None:
+                            for line in self.peak_mark:
+                                line.remove()
+                        self.peak_mark = self.graphique.plot(pos_peak[pos] * idx_freq, self.fft_audio[pos_peak[pos]], "x")
+                        self.canvas.draw()
 
 
     def init_axe_time(self):
@@ -311,14 +333,14 @@ class Plot(wx.Panel):
         self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
         tfd_size = self.flux_audio.set_tfd_size()
         ratio = self.flux_audio.Fe / tfd_size
-        val_x = np.arange(self.flux_audio.set_k_min(), self.flux_audio.set_k_max(), self.pas)
-        val_x = val_x * ratio
+        self.val_x = np.arange(self.flux_audio.set_k_min(), self.flux_audio.set_k_max(), self.pas)
+        self.val_x = self.val_x * ratio
         spec_selec = self.fft_audio[self.flux_audio.set_k_min():
                                     self.flux_audio.set_k_max():self.pas]
         self.max_module = spec_selec.max()
         if self.max_module == 0:
             self.max_module = 1
-        self.lines = self.graphique.plot(val_x, spec_selec)
+        self.lines = self.graphique.plot(self.val_x, spec_selec)
         self.graphique.axis((self.flux_audio.set_k_min() * ratio,
                              self.flux_audio.set_k_max() * ratio,
                              0,

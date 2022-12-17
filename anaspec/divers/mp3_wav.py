@@ -1,11 +1,12 @@
 import os
+import time
 import ffmpeg
 import wx
 
-# check if ffmpeg is available on windows https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-essentials.7z
+# check if ffmpeg is available on windows
 if os.path.splitdrive(os.getcwd())[0] != '':
     if os.path.exists("c:/temp/ffmpeg/bin"):
-        os.environ["PATH"] = "c:/temp/ffmpeg-git-essentials.7z/bin" + os.pathsep + os.environ["PATH"]
+        os.environ["PATH"] = "c:/temp/ffmpeg/bin" + os.pathsep + os.environ["PATH"]
     else:
         wx.LogWarning("ffmpeg not found\nffmpeg must be in system path")
 wx.LogMessage("Convert a wav file to mp3 (8, 32, 128, 320kbps) and mp3 to wav")
@@ -21,6 +22,7 @@ for ab in bit_rate:
     cmd = audio_wav.output(nom_fichier,audio_bitrate=ab).overwrite_output()
     ffmpeg.compile(cmd)
     cmd.run_async(quiet=True)
+    time.sleep(3)
 
 bit_rate = ['8k', '32k', '128k', '320k']
 for ab in bit_rate: 
@@ -31,3 +33,4 @@ for ab in bit_rate:
     cmd = audio_mp3.output(nom_fichier,ar=44100).overwrite_output()
     ffmpeg.compile(cmd)
     cmd.run_async(quiet=True)
+    time.sleep(3)
