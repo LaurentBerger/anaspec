@@ -387,7 +387,7 @@ class InterfaceAnalyseur(wx.Panel):
         bouton.Bind(wx.EVT_BUTTON, self.on_save, bouton)
         self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
 
-        st_texte = wx.StaticText(page, label="frequency")
+        st_texte = wx.StaticText(page, label="Sampling frequency")
 
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         choix = []

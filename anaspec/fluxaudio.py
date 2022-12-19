@@ -38,10 +38,10 @@ class FluxAudio:
         self.duration = -1
         self.plotdata = None
         self.mapping = None
-        self.k_min = 0
-        self.k_max = self.tfd_size // 2 + 1
-        self.f_min = 0
-        self.f_max = self.Fe // 2 
+        self.k_min = 0 # indice de la fréquence minimale sélectionnée
+        self.k_max = self.tfd_size // 2 + 1  # indice de la fréquence maximale sélectionnée
+        self.f_min = 0 # fréquence minimale sélectionnée
+        self.f_max = self.Fe // 2  # fréquence maximale sélectionnée
         self.set_k_min(self.f_min)
         self.set_k_max(self.f_max)
         self.f_min_spectro = 0
@@ -55,6 +55,16 @@ class FluxAudio:
 
     def get_device(self):
         return sd.query_devices()
+
+    def get_format_precision(self, val):
+
+        self._decimale =  np.round(np.log10(self.Fe /self.tfd_size))
+        self._mantisse = np.round(np.log10(val))
+        nb_dig = int(self._mantisse) - int(self._decimale)
+        if nb_dig <= 0:
+            nb_dig = 1
+        self._format =  '.' + str(nb_dig) + 'e'
+        return format(val, self._format)
 
     def set_tfd_size(self, val=None):
         if val is not None:
@@ -126,6 +136,10 @@ class FluxAudio:
             self.Fe = freq_ech
             self.taille_buffer_signal = int(10 * self.Fe)
             self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
+            if self.f_min > self.Fe/2:
+                self.f_min = self.Fe//2 - 1
+            if self.f_max > self.Fe//2:
+                self.f_max = self.Fe//2 - 1
         return self.Fe
 
     def set_window_size(self, nb_ech):
@@ -135,8 +149,8 @@ class FluxAudio:
         self.duration = -1
     
     def capacite_periph_in(self, liste_periph, device_idx):
-        self.frequence_dispo = set({})
-        self.frequence_dispo.update([str(liste_periph[device_idx]['default_samplerate'])])
+        self.frequence_dispo = []
+        self.frequence_dispo.append(str(liste_periph[device_idx]['default_samplerate']))
         self.max_canaux = liste_periph[device_idx]['max_input_channels']
         self.nb_canaux = self.max_canaux
         for freq in frequence_num:
@@ -146,7 +160,8 @@ class FluxAudio:
                     samplerate=freq, callback=audio_callback)
                 self.stream.start()
                 self.stream.close()
-                self.frequence_dispo.update([str(freq)])
+                if str(freq) not in self.frequence_dispo:
+                    self.frequence_dispo.append(str(freq))
             except:
                 pass
         print(self.frequence_dispo)
