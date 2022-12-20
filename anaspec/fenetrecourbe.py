@@ -281,17 +281,18 @@ class Plot(wx.Panel):
                 idx = self.localise_freq(x, y)
                 print('Selected frequency ', self.flux_audio.get_format_precision(idx  * idx_freq), "Hz")
                 print('Module ', format(self.fft_audio[idx], '.4e')," u.a.")
-                bp_inf = np.where(self.fft_audio[0:idx+1] < self.fft_audio[idx]/2)
+                bp_level = 10**(self.flux_audio.set_bp_level()/10)
+                bp_inf = np.where(self.fft_audio[0:idx+1] < self.fft_audio[idx] * bp_level)
                 if bp_inf[0].shape[0] > 0:
                     idx_inf = bp_inf[0][-1]
                 else:
                     idx_inf =  0
-                bp_sup = np.where(self.fft_audio[idx+1:self.flux_audio.tfd_size//2] < self.fft_audio[idx]/2)
+                bp_sup = np.where(self.fft_audio[idx+1:self.flux_audio.tfd_size//2] < self.fft_audio[idx] * bp_level)
                 if bp_sup[0].shape[0] > 0:
                     idx_sup = bp_sup[0][0]+idx+1
                 else:
                     idx_sup =  self.flux_audio.tfd_size//2
-                print('Width at height ', format(self.fft_audio[idx]/2, '.4e'), end='')
+                print('Width at height ', format(self.fft_audio[idx] * bp_level, '.4e'), end='')
                 texte = 'BP = '+ self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq) + 'Hz'
                 print(texte)
                 print('Limits = ', idx_inf * idx_freq, 'Hz <-> ',  idx_sup * idx_freq, 'Hz', end='')
@@ -302,12 +303,12 @@ class Plot(wx.Panel):
                     self.bp_arrw.remove()
                 self.bp_arrw = self.graphique.annotate(
                                         '',
-                                        xy=(idx_inf * idx_freq, self.fft_audio[idx]/2),
-                                        xytext=(idx_sup * idx_freq, self.fft_audio[idx]/2),
+                                        xy=(idx_inf * idx_freq, self.fft_audio[idx]* bp_level),
+                                        xytext=(idx_sup * idx_freq, self.fft_audio[idx]* bp_level),
                                         arrowprops=dict(arrowstyle='<->'))
-                self.bp_line = self.graphique.hlines(self.fft_audio[idx]/2, idx_inf * idx_freq, idx_sup * idx_freq,
+                self.bp_line = self.graphique.hlines(self.fft_audio[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
                                                      colors='k')
-                self.bp_text = self.graphique.text((idx_sup  + idx_inf) * idx_freq / 2,self.fft_audio[idx]/2,  texte)
+                self.bp_text = self.graphique.text((idx_sup  + idx_inf) * idx_freq / 2,self.fft_audio[idx]* bp_level,  texte)
                 #ratio = (idx_sup - idx_inf) * idx_freq * 0.05
                 #self.bp_line = self.graphique.arrow(self.fft_audio[idx]/2, idx_inf * idx_freq - ratio, ratio, ratio)
                 #self.bp_line = self.graphique.arrow(self.fft_audio[idx]/2, idx_sup * idx_freq , ratio, ratio)
@@ -317,7 +318,10 @@ class Plot(wx.Panel):
                 if self.flux_audio.plotdata is not None and self.fft_audio is not None:
                     idx = self.localise_freq(x, y)
                     print('Selected frequency  ', format(idx * idx_freq,'.5e'), "Hz")
-                    pos_peak, _ = signal.find_peaks( self.fft_audio, height= self.fft_audio[idx]/2)
+                    bp_level = 10**(self.flux_audio.set_bp_level()/10)
+                    pos_peak, _ = signal.find_peaks(self.fft_audio,
+                                                    height= self.fft_audio[idx] * bp_level,
+                                                    distance=self.flux_audio.set_peak_distance())
                     nb_peak = 0
                     for p in pos_peak:                   
                         if p > 0 and p < self.flux_audio.tfd_size // 2:

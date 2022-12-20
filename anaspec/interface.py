@@ -33,6 +33,9 @@ SLIDER_OVERLAP_SPECTRO = 3004
 SLIDER_SPECTRO_SIZE = 3005
 COMBO_WINDOW_TYPE = 3006
 
+SLIDER_BP_VALUE = 4001
+SLIDER_PEAK_DISTANCE = 4002
+
 
 
 
@@ -185,8 +188,9 @@ class InterfaceAnalyseur(wx.Panel):
         self.dico_slider = {0: None}
         self.ind_page = 0
         self.ajouter_page_acquisition()
-        self.ajouter_page_tfd("Fourier")
+        self.ajouter_page_tfd("Spectrum")
         self.ajouter_page_spectrogram("Spectrogram")
+        self.ajouter_page_parameters("Parameters")
         self.note_book.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
         self.note_book.Refresh(True)
         self.note_book.SetSize(self.parent.GetClientSize())
@@ -204,6 +208,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.flux_audio.courbe = plotter
 
         frame.Show()
+
 
     def install_menu(self):
         """
@@ -374,6 +379,58 @@ class InterfaceAnalyseur(wx.Panel):
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.ind_page = self.ind_page + 1
+
+    def ajouter_page_parameters(self, name="Parameters"):
+        """
+        création de l'onglet Parameters
+        pour paramétrer les mesures
+        """
+        ctrl = []
+        page = wx.Panel(self.note_book)
+        font = wx.Font(10,
+                       wx.FONTFAMILY_DEFAULT,
+                       wx.FONTSTYLE_NORMAL,
+                       wx.FONTWEIGHT_BOLD)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=5, hgap=5)
+
+        st_texte = wx.StaticText(page, label="Bandwidth at (dB)")
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        st_texte = wx.Slider(page,
+                             id=SLIDER_BP_VALUE,
+                             value=-3,
+                             minValue=-10,
+                             maxValue=-1,
+                             style=style_texte,
+                             name="Bandwidth")
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        st_texte.Bind(wx.EVT_SCROLL_CHANGED,
+                      self.change_slider,
+                      st_texte,
+                      SLIDER_BP_VALUE)
+        self.dico_slider[SLIDER_BP_VALUE] = (self.flux_audio.set_bp_level, None)
+
+        st_texte = wx.StaticText(page, label="Distancen in samples between neighbouring peaks")
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        st_texte = wx.Slider(page,
+                             id=SLIDER_PEAK_DISTANCE,
+                             value=1,
+                             minValue=1,
+                             maxValue=1000,
+                             style=style_texte,
+                             name="PeakDistance")
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        st_texte.Bind(wx.EVT_SCROLL_CHANGED,
+                      self.change_slider,
+                      st_texte,
+                      SLIDER_PEAK_DISTANCE)
+        self.dico_slider[SLIDER_PEAK_DISTANCE] = (self.flux_audio.set_peak_distance, None)
+
+        page.SetSizerAndFit(ma_grille)
+        self.note_book.AddPage(page, name)
+        self.ctrl.append(ctrl)
+        self.ind_page = self.ind_page + 1
+
 
     def ajouter_page_acquisition(self, name="Sampling"):
         """
@@ -655,12 +712,13 @@ class InterfaceAnalyseur(wx.Panel):
             if self.dico_slider[SLIDER_OVERLAP_SPECTRO][0]() > val:
                 self.dico_slider[SLIDER_OVERLAP_SPECTRO][0](val-1)
                 self.update_spectro_interface()
-        self.flux_audio.courbe.draw_all_axis()
-        r_upd = self.flux_audio.courbe.GetClientRect()
-        self.flux_audio.courbe.Refresh(rect=r_upd)
-        # self.flux_audio.courbe.draw_page(None)
-        if not self.samp_in_progress:
-            self.flux_audio.courbe.maj_page(self.dico_slider[id_fenetre][1])
+        if self.dico_slider[id_fenetre][1] is not None:
+            self.flux_audio.courbe.draw_all_axis()
+            r_upd = self.flux_audio.courbe.GetClientRect()
+            self.flux_audio.courbe.Refresh(rect=r_upd)
+            # self.flux_audio.courbe.draw_page(None)
+            if not self.samp_in_progress and self.dico_slider[id_fenetre][1] is not None:
+                self.flux_audio.courbe.maj_page(self.dico_slider[id_fenetre][1])
 
     def change_tfd_size(self, event):
         """

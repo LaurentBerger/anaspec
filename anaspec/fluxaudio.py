@@ -31,6 +31,8 @@ class FluxAudio:
         self.nb_canaux = canaux
         self.nb_data = 0
         self.tps_refresh = 0.1
+        self._bp_level = -3
+        self._peak_d = 1
         self.Fe = freq
         self.courbe = None
         self.file_attente = queue.Queue()
@@ -65,6 +67,16 @@ class FluxAudio:
             nb_dig = 1
         self._format =  '.' + str(nb_dig) + 'e'
         return format(val, self._format)
+
+    def set_bp_level(self, val=None):
+        if val is not None and -10 <= val <=-1:
+            self._bp_level = val
+        return self._bp_level
+
+    def set_peak_distance(self, val=None):
+        if val is not None and 1<= val <=1000:
+            self._peak_d = val
+        return self._peak_d
 
     def set_tfd_size(self, val=None):
         if val is not None:
