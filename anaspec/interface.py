@@ -8,6 +8,7 @@ d'échantillon, du recouvrement, du type de fenêtrage
 # pylint: disable=maybe-no-member
 import sys
 import soundfile
+import sounddevice as sd
 import wx
 import wx.lib.agw.aui as aui
 import fluxaudio
@@ -162,7 +163,14 @@ class InterfaceAnalyseur(wx.Panel):
         activation de l'interface d'acquisition et
         ajout d'une marque sur l'article sélectionné
         """
-        pass
+        obj = event.GetEventObject()
+        self.disable_item_check(2)
+        id_fenetre = event.GetId()
+        obj.Check(id_fenetre, True)
+        nom_periph_out = obj.GetLabel(id_fenetre)
+        if nom_periph_out in self.idmenu_audio_out:
+            self.idx_periph_out = self.idmenu_audio_out[nom_periph_out]
+            sd.default.device[1] = self.idx_periph_out
 
     def interface_acquisition(self):
         """
@@ -232,7 +240,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.parent.SetMenuBar(barre_menu)
         self.parent.Bind(wx.EVT_CLOSE, self.close_page)
         self.parent.Bind(wx.EVT_MENU, self.open_wav, id=wx.ID_OPEN)
-        # self.parent.Bind(wx.EVT_MENU, self.save_page, id=wx.ID_SAVE)
+        self.parent.Bind(wx.EVT_MENU, self.on_save, id=wx.ID_SAVE)
         self.parent.Bind(wx.EVT_MENU, self.quitter, id=wx.ID_EXIT)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_in, id=200, id2=299)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_out, id=300, id2=399)
@@ -261,6 +269,9 @@ class InterfaceAnalyseur(wx.Panel):
                 wx.MessageBox("Sampling frequency are not equal\n "+ str(self.flux_audio.Fe) + "Hz<> " +str(Fe), "Error", wx.ICON_ERROR)
                 return
             nb_ech = min(son.shape[0], self.flux_audio.plotdata.shape[0])
+            self.flux_audio.courbe.page[0].t_beg = self.flux_audio.plotdata.shape[0] - nb_ech
+            self.flux_audio.courbe.page[0].t_end = self.flux_audio.taille_buffer_signal
+            self.flux_audio.courbe.page[0].maj_limite_slider()
             if len(son.shape) == 1:
                 self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] += son[:nb_ech]
             else:
@@ -382,9 +393,9 @@ class InterfaceAnalyseur(wx.Panel):
         bouton.Bind(wx.EVT_BUTTON, self.on_start_stop, bouton)
         self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
 
-        bouton = wx.Button(page, id=SAVE_SIGNAL, label='Save signal')
+        bouton = wx.Button(page, id=SAVE_SIGNAL, label='Play signal')
         bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
-        bouton.Bind(wx.EVT_BUTTON, self.on_save, bouton)
+        bouton.Bind(wx.EVT_BUTTON, self.on_play, bouton)
         self.ajouter_bouton((bouton, 0), ctrl, ma_grille, font)
 
         st_texte = wx.StaticText(page, label="Sampling frequency")
@@ -794,14 +805,31 @@ class InterfaceAnalyseur(wx.Panel):
         """
         Début/Fin de l'acquisition
         """
-        self.ind_fichier = self.ind_fichier + 1
+        with wx.FileDialog(self, "Save file", wildcard="wav files (*.wav)|*.wav",
+                               style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
 
-        with soundfile.SoundFile("buffer" + str(self.ind_fichier) + ".wav",
-                                 mode='w',
-                                 samplerate=self.flux_audio.Fe,
-                                 channels=self.flux_audio.nb_canaux,
-                                 subtype='FLOAT') as fichier:
-            fichier.write(self.flux_audio.plotdata)
+                if fileDialog.ShowModal() == wx.ID_CANCEL:
+                    return
+                pathname = fileDialog.GetPath()
+                try:
+                    self.ind_fichier = self.ind_fichier + 1
+
+                    with soundfile.SoundFile(pathname,
+                                             mode='w',
+                                             samplerate=self.flux_audio.Fe,
+                                             channels=self.flux_audio.nb_canaux,
+                                             subtype='FLOAT') as fichier:
+                        fichier.write(self.flux_audio.plotdata)
+                except IOError:
+                    wx.LogError("Cannot save current data in file '%s'." % pathname)        
+
+    def on_play(self, _):
+        """
+        Ecouter le signal enregistré
+        """
+        print("try to play on default output")
+        sd.play(self.flux_audio.plotdata, self.flux_audio.Fe)
+
 
     def on_start_stop(self, event):
         """

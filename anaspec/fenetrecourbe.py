@@ -222,6 +222,8 @@ class Plot(wx.Panel):
         self.slider_t_end.SetMax(self.flux_audio.taille_buffer_signal)
         self.slider_t_end.SetMin(min(self.flux_audio.taille_buffer_signal-1, self.slider_t_beg.GetValue()))
         self.slider_t_beg.SetMax(self.flux_audio.taille_buffer_signal)
+        self.slider_t_beg.SetValue(self.t_beg)
+        self.slider_t_end.SetValue(self.t_end)
 
     def change_slider(self, event):
         """
