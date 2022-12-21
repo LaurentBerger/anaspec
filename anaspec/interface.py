@@ -36,7 +36,7 @@ COMBO_WINDOW_TYPE = 3006
 SLIDER_BP_VALUE = 4001
 SLIDER_PEAK_DISTANCE = 4002
 
-
+ID_OPEN_REF = 1101
 
 
 PARAM1_WINDOW_TYPE = COMBO_WINDOW_TYPE + 2
@@ -91,6 +91,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page = 0
         self.duration = -1
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
+        self.flux_audio_ref = None
         self.install_menu()
         self.parent.Show()
         self.type_window = ['boxcar', 'triang', 'blackman', 'hamming',
@@ -138,7 +139,6 @@ class InterfaceAnalyseur(wx.Panel):
         if nom_periph_in in self.idmenu_audio_in:
             self.idx_periph_in = self.idmenu_audio_in[nom_periph_in]
             self.flux_audio.nb_canaux = self.liste_periph[self.idx_periph_in]["max_input_channels"]
-            self.flux_audio.nb_canaux = self.liste_periph[self.idx_periph_in]["max_input_channels"]
             self.flux_audio.set_frequency(self.liste_periph[self.idx_periph_in]["default_samplerate"])
             self.flux_audio.capacite_periph_in(self.liste_periph, self.idx_periph_in)
             self.flux_audio.init_data_courbe()
@@ -147,6 +147,7 @@ class InterfaceAnalyseur(wx.Panel):
             self.init_interface = True
         if self.choix_freq is not None:
             self.maj_choix_freq()
+        print(self.flux_audio.nb_canaux, self.flux_audio.taille_buffer_signal)
 
     def disable_item_check(self, indexe=1):
         """
@@ -226,6 +227,7 @@ class InterfaceAnalyseur(wx.Panel):
         barre_menu = wx.MenuBar()
         menu_fichier = wx.Menu()
         _ = menu_fichier.Append(wx.ID_OPEN, 'Open', "open wave file")
+        _ = menu_fichier.Append(ID_OPEN_REF, 'Open reference', "open wave file")
         _ = menu_fichier.Append(wx.ID_SAVE, 'Save', "save wave file")
         _ = menu_fichier.Append(wx.ID_EXIT, 'Quit', "exit program")
         barre_menu.Append(menu_fichier, '&File')
@@ -245,6 +247,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.parent.SetMenuBar(barre_menu)
         self.parent.Bind(wx.EVT_CLOSE, self.close_page)
         self.parent.Bind(wx.EVT_MENU, self.open_wav, id=wx.ID_OPEN)
+        self.parent.Bind(wx.EVT_MENU, self.open_wav_ref, id=ID_OPEN_REF)
         self.parent.Bind(wx.EVT_MENU, self.on_save, id=wx.ID_SAVE)
         self.parent.Bind(wx.EVT_MENU, self.quitter, id=wx.ID_EXIT)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_in, id=200, id2=299)
@@ -257,6 +260,26 @@ class InterfaceAnalyseur(wx.Panel):
         """
         wx.MessageBox("Cannot be closed. Use File menu to quit", "Warning", wx.ICON_WARNING)
         evt.Veto()
+
+    def open_wav_ref(self, _):
+        """
+        ouvrir un fichier wav et utiliser les données 
+        comme l'entrée d'un système
+        """
+        if self.flux_audio.plotdata is None:
+               wx.MessageBox("First choose peripherical in input device menu", "Error", wx.ICON_ERROR)
+               return
+        nom_fichier_son = wx.FileSelector("Open wave file reference",wildcard="*.wav")
+        if nom_fichier_son.strip():
+            son , Fe = soundfile.read(nom_fichier_son)
+            if self.flux_audio.Fe != Fe:
+                wx.MessageBox("Sampling frequency are not equal\n "+ str(self.flux_audio.Fe) + "Hz<> " +str(Fe), "Error", wx.ICON_ERROR)
+                return
+            self.flux_audio_ref = fluxaudio.Signal(freq=Fe, fenetre=son.shape[0], canaux=len(son.shape), s_array=son, file_name=nom_fichier_son)
+            self.flux_audio.courbe.page[0].flux_audio_ref = self.flux_audio_ref
+            self.flux_audio.courbe.page[1].flux_audio_ref = self.flux_audio_ref
+            self.flux_audio_ref.compute_spectrum()
+            # self.flux_audio.courbe.draw_page(None)
 
     def open_wav(self, _):
         """
@@ -886,7 +909,7 @@ class InterfaceAnalyseur(wx.Panel):
         Ecouter le signal enregistré
         """
         print("try to play on default output")
-        sd.play(self.flux_audio.plotdata, self.flux_audio.Fe)
+        sd.play(self.flux_audio.plotdata, self.flux_audio.Fe, mapping=[1, 2])
 
 
     def on_start_stop(self, event):
@@ -897,6 +920,7 @@ class InterfaceAnalyseur(wx.Panel):
             wx.MessageBox("You must select an audio in device",
                           "Warning",
                           wx.ICON_WARNING)
+            return
         bouton = event.GetEventObject()
         texte_label = bouton.GetLabel()
         if texte_label == "Start":
@@ -906,7 +930,7 @@ class InterfaceAnalyseur(wx.Panel):
             self.set_window_size()
             self.set_time_length()
             self.flux_audio.courbe.draw_all_axis()
-            if not self.flux_audio.open(self.idx_periph_in):
+            if not self.flux_audio.open_stream(self.idx_periph_in):
                 self.disable_item_check()
                 wx.MessageBox("Cannot opened input device : input disable",
                               "Error",
@@ -914,6 +938,8 @@ class InterfaceAnalyseur(wx.Panel):
                 return
             self.update_spectro_interface()
             self.update_tfd_interface()
+            for page in self.flux_audio.courbe.page:
+                page.samp_in_progress = False
             self.flux_audio.courbe.page[0].courbe_active = True
             bouton.SetLabel("Stop")
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
@@ -926,6 +952,8 @@ class InterfaceAnalyseur(wx.Panel):
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             self.figer_parametre(False)
             self.samp_in_progress = False
+            for page in self.flux_audio.courbe.page:
+                page.samp_in_progress = False
 
     def figer_parametre(self, enable):
         """

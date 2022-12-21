@@ -3,6 +3,7 @@ A DEFINIR
 
 """
 
+from pickle import NONE
 import time
 import queue
 import threading
@@ -114,11 +115,13 @@ class Plot(wx.Panel):
                 self.id_bouton_normaliser =  None
                 
         self.flux_audio = f_audio
+        self.flux_audio_ref = None
         self.type_courbe = type_courbe
         self.courbe_active = False
         self.parent = parent
         self.figure, self.graphique = plt.subplots()
         self.lines = None
+        self.lines_ref =  None
         self.image = None
         self.bp_line = None
         self.bp_text = None
@@ -126,11 +129,13 @@ class Plot(wx.Panel):
         self.peak_mark = None
         self.sig_audio = None
         self.fft_audio = None
+        self.fft_audio_ref = None
         self.max_module = 1
         self.best_debug = False
         self.slider_t_beg = None
         self.slider_t_end = None
         self.val_x = None
+        self.val_x_ref = None
         self.t_beg = 0
         self.t_end = self.flux_audio.nb_ech_fenetre
         self.pas = 1
@@ -146,6 +151,7 @@ class Plot(wx.Panel):
         self.toolbar = NavigationToolbar(self.canvas)
         self.toolbar.Realize()
         self.auto_adjust = True
+        self.samp_in_progress = False
         if type_courbe in ['time', 'dft_modulus']:
             self.max_module = self.flux_audio.nb_ech_fenetre /\
                               self.flux_audio.Fe
@@ -277,6 +283,19 @@ class Plot(wx.Panel):
                             a = self.fft_audio[idx]
                             texte = "f= " + self.flux_audio.get_format_precision(idx * idx_freq) + "(Hz)  module=" + format(a,".6e")
                             self.info_curseur.SetLabel(10 * " " + texte)
+            if event.key == 'alt' and self.type_courbe == 'time':
+                if int(np.round(x)) >self.t_beg:
+                    self.t_end = int(np.round(x))
+                    self.maj_limite_slider()
+                    self.init_axe()
+                    r_upd = self.GetClientRect()
+                    self.Refresh(rect=r_upd)
+            if event.key == 'control' and self.type_courbe == 'time':
+                if int(np.round(x)) < self.t_end:
+                    self.t_beg = int(np.round(x))
+                    self.init_axe()
+                    self.maj_limite_slider()
+                    self.canvas.draw()
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
                 print('Selected frequency ', self.flux_audio.get_format_precision(idx  * idx_freq), "Hz")
@@ -364,6 +383,15 @@ class Plot(wx.Panel):
         if self.max_module == 0:
             self.max_module = 1
         self.lines = self.graphique.plot(self.val_x, spec_selec)
+        if not self.samp_in_progress and self.flux_audio_ref is not None:
+            if self.lines_ref is not None:
+                for line in self.lines_ref:
+                    line.remove()
+                self.lines_ref = None
+            k_norm = self.max_module / self.flux_audio_ref.spec_selec.max()
+            self.lines_ref = self.graphique.plot(self.flux_audio_ref.frequency,
+                                                 self.flux_audio_ref.spec_selec * k_norm,
+                                                 color='red')
         self.graphique.axis((self.flux_audio.set_k_min() * ratio,
                              self.flux_audio.set_k_max() * ratio,
                              0,

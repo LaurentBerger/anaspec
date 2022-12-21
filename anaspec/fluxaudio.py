@@ -14,59 +14,42 @@ NB_BUFFER = 64
 
 frequence_num = [11025.0, 22050.0, 44100.0, 48000.0, 88200.0, 176400.0]
 
-
-class FluxAudio:
+class Signal:
     """
     flux audio et ensemble des paramètres associés
     """
-    def __init__(self, n_evt, freq=44100, fenetre=2048, canaux=1):
-        global NEW_EVENT
-        global FLUX_AUDIO
-        FLUX_AUDIO = self
-        NEW_EVENT = n_evt
-        self.taille_buffer_signal = int(10*freq)
+    def __init__(self,freq=44100, fenetre=2048, canaux=1, s_array=None, file_name=None):
+        self.nb_ech_fenetre = fenetre # pour l'acquisition
+        self.Fe = freq
+        if s_array is None:
+            self.taille_buffer_signal = int(10*freq)
+            self.plotdata = None
+        else:
+            self.taille_buffer_signal = fenetre
+            self.plotdata = s_array
+        self.file_name = file_name
         self.nb_ech_fenetre = fenetre # pour l'acquisition
         self.tfd_size = self.nb_ech_fenetre
         self.spectro_size = self.nb_ech_fenetre
-        self.nb_canaux = canaux
-        self.nb_data = 0
-        self.tps_refresh = 0.1
-        self._bp_level = -3
-        self._peak_d = 1
-        self.Fe = freq
-        self.courbe = None
-        self.file_attente = queue.Queue()
-        self.stream = None
-        self.duration = -1
-        self.plotdata = None
-        self.mapping = None
-        self.k_min = 0 # indice de la fréquence minimale sélectionnée
-        self.k_max = self.tfd_size // 2 + 1  # indice de la fréquence maximale sélectionnée
         self.f_min = 0 # fréquence minimale sélectionnée
         self.f_max = self.Fe // 2  # fréquence maximale sélectionnée
+        self.f_min_spectro = 0
+        self.f_max_spectro = self.Fe // 2
+        self.k_min = 0 # indice de la fréquence minimale sélectionnée
+        self.k_max = self.tfd_size // 2 + 1  # indice de la fréquence maximale sélectionnée
+        self.win_size_spectro = self.spectro_size // 2
+        self.overlap_spectro = self.spectro_size // 16
+        self.nb_canaux = canaux
+        self._bp_level = -3
+        self._peak_d = 1
         self.set_k_min(self.f_min)
         self.set_k_max(self.f_max)
         self.f_min_spectro = 0
         self.f_max_spectro = self.Fe // 2
-        self.win_size_spectro = self.spectro_size // 2
-        self.overlap_spectro = self.spectro_size // 16
         self.type_fenetre = ('boxcar')
-        self.simulate =  False
-        self.frequence_dispo =  [] # frequence possible sur le périphérique
-        self.max_canaux =  0 # nombre maximum de canaux disponiobles pour la numérisation
-
-    def get_device(self):
-        return sd.query_devices()
-
-    def get_format_precision(self, val):
-
-        self._decimale =  np.round(np.log10(self.Fe /self.tfd_size))
-        self._mantisse = np.round(np.log10(val))
-        nb_dig = int(self._mantisse) - int(self._decimale)
-        if nb_dig <= 0:
-            nb_dig = 1
-        self._format =  '.' + str(nb_dig) + 'e'
-        return format(val, self._format)
+        self.fft = None # pour le signal de référence
+        self.frequency =  None # pour le signal de référence
+        self.spec_selec = None
 
     def set_bp_level(self, val=None):
         if val is not None and -10 <= val <=-1:
@@ -138,6 +121,50 @@ class FluxAudio:
             self.overlap_spectro = recou
         return self.overlap_spectro
 
+    def compute_spectrum(self):
+        self.fft = np.fft.fft(self.plotdata)
+        self.frequency =  np.arange(0.0, self.fft.shape[0]//2) * self.Fe / self.fft.shape[0]
+        self.spec_selec =  np.abs(self.fft[0: self.fft.shape[0]//2]).real / self.Fe
+
+class FluxAudio(Signal):
+    """
+    flux audio et ensemble des paramètres associés
+    """
+    def __init__(self, n_evt=None, freq=44100, fenetre=2048, canaux=1):
+        super().__init__(freq, fenetre, canaux)
+        global NEW_EVENT
+        global FLUX_AUDIO
+        FLUX_AUDIO = self
+        NEW_EVENT = n_evt
+        self.file_attente = queue.Queue()
+        self.courbe = None
+        self.mapping = None
+        self.nb_data = 0
+        self.simulate =  False
+        self.nb_canaux = canaux
+        self.Fe = freq
+        self.courbe = None
+        self.stream = None
+        self.duration = -1
+        self.tps_refresh = 0.1
+        self.frequence_dispo =  [] # frequence possible sur le périphérique
+        self.max_canaux =  0 # nombre maximum de canaux disponiobles pour la numérisation
+        self.simulate =  False
+
+    def get_device(self):
+        return sd.query_devices()
+
+    def get_format_precision(self, val):
+
+        self._decimale =  np.round(np.log10(self.Fe /self.tfd_size))
+        self._mantisse = np.round(np.log10(val))
+        nb_dig = int(self._mantisse) - int(self._decimale)
+        if nb_dig <= 0:
+            nb_dig = 1
+        self._format =  '.' + str(nb_dig) + 'e'
+        return format(val, self._format)
+
+
     def init_data_courbe(self):
         self.taille_buffer_signal = int(10 * self.Fe)
         self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
@@ -179,7 +206,7 @@ class FluxAudio:
         print(self.frequence_dispo)
 
 
-    def open(self, device_idx):
+    def open_stream(self, device_idx):
         self.init_data_courbe()
         self.file_attente = queue.Queue()
         self.stream = sd.InputStream(
