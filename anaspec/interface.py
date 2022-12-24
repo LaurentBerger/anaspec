@@ -206,6 +206,7 @@ class InterfaceAnalyseur(wx.Panel):
         _ = plotter.add('Time Signal', type_courbe='time')
         _ = plotter.add('Spectral', type_courbe='dft_modulus')
         _ = plotter.add('Spectrogram', type_courbe='spectrogram')
+        _ = plotter.add('Frequency response', type_courbe='Frequency response')
         self.flux_audio.courbe = plotter
 
         frame.Show()
@@ -278,7 +279,12 @@ class InterfaceAnalyseur(wx.Panel):
             self.flux_audio_ref = fluxaudio.Signal(freq=Fe, fenetre=son.shape[0], canaux=len(son.shape), s_array=son, file_name=nom_fichier_son)
             self.flux_audio.courbe.page[0].flux_audio_ref = self.flux_audio_ref
             self.flux_audio.courbe.page[1].flux_audio_ref = self.flux_audio_ref
+            self.flux_audio.courbe.page[2].flux_audio_ref = self.flux_audio_ref
+            self.flux_audio.courbe.page[3].flux_audio_ref = self.flux_audio_ref
             self.flux_audio_ref.compute_spectrum()
+            print("Sample size (ref) ", son.shape)
+            print("Sample size (sig) ", self.flux_audio.plotdata.shape)
+            print("Sample size (sig) selected", self.flux_audio.courbe.page[0].t_beg, self.flux_audio.courbe.page[0].t_end)
             # self.flux_audio.courbe.draw_page(None)
 
     def open_wav(self, _):

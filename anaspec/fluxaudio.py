@@ -4,6 +4,7 @@ import sys
 
 import numpy as np
 import sounddevice as sd
+import scipy.signal
 import wx
 import wx.lib.newevent
 
@@ -50,6 +51,7 @@ class Signal:
         self.fft = None # pour le signal de référence
         self.frequency =  None # pour le signal de référence
         self.spec_selec = None
+        self.freq_response = None
 
     def set_bp_level(self, val=None):
         if val is not None and -10 <= val <=-1:
@@ -125,6 +127,30 @@ class Signal:
         self.fft = np.fft.fft(self.plotdata)
         self.frequency =  np.arange(0.0, self.fft.shape[0]//2) * self.Fe / self.fft.shape[0]
         self.spec_selec =  np.abs(self.fft[0: self.fft.shape[0]//2]).real / self.Fe
+
+    def compute_frequency_response(self, signal, threshold=0.1):
+        """
+        Calcul de la réponse fréquentielle pour
+        les fréquences vérifiant que module de 
+        la fft > threshold max(fft)
+        """
+        offset_synchro = self.synchroniser(self.plotdata, signal)
+        if offset_synchro>0:
+            return False, "Unable to syncronize signal"
+        if offset_synchro + self.plotdata.shape[0] >= signal.shape[0]:
+            return False, "Synchro enable but signal size too small"
+        fft_output =  np.fft.fft(signal[-offset_synchro: -offset_synchro + self.plotdata.shape[0]])
+        self.freq_response = np.zeros(shape=(self.plotdata.shape[0],1), dtype=np.float64)
+        self.freq_response = fft_output / self.fft
+        idx = self.fft < self.fft.max() *  threshold
+        self.freq_response[idx] = 0.0
+
+    def synchroniser(self, sig1, sig2):
+        cxy = scipy.signal.correlate(sig1/sig1.max(), sig2/sig2.max(), method='fft')
+        lags = scipy.signal.correlation_lags(len(sig1), len(sig2))
+        d = lags[np.argmax(cxy)]
+        return d
+
 
 class FluxAudio(Signal):
     """

@@ -7,6 +7,7 @@ from pickle import NONE
 import time
 import queue
 import threading
+from types import NoneType
 import numpy as np
 from scipy import signal
 
@@ -37,6 +38,7 @@ BOUTON_NORMALISER = 8104
 SLIDER_SPECTRO_BEG =8201
 SLIDER_SPECTRO_END =8202
 BOUTON_COPY_SPECTRO = 8203
+BOUTON_COMPUTE_HZ = 8204
 
 
 class CalculFFT(threading.Thread):
@@ -89,12 +91,15 @@ class Plot(wx.Panel):
         global EVENT_FFT, EVENT_SPECTRO, PAGE_PLOT_FFT, PAGE_PLOT_SPECTRO
         wx.Panel.__init__(self, parent, id=id_fenetre)
         self.file_attente = queue.Queue()
+        self.id_slider_beg = None
+        self.id_slider_end = None
+        self.id_bouton_copie =  None
+        self.id_bouton_normaliser =  None
+        self.id_bouton_compute =  None
         match type_courbe:
             case 'time':
                 self.id_slider_beg = SLIDER_T_BEG
                 self.id_slider_end = SLIDER_T_END
-                self.id_bouton_copie =  None
-                self.id_bouton_normaliser =  None
             case 'dft_modulus':
                 self.id_slider_beg = SLIDER_FFT_BEG
                 self.id_slider_end = SLIDER_FFT_END
@@ -112,7 +117,8 @@ class Plot(wx.Panel):
                 PAGE_PLOT_SPECTRO = self
                 EVENT_SPECTRO = self.new_event_spectro
                 self.id_bouton_copie =  BOUTON_COPY_SPECTRO
-                self.id_bouton_normaliser =  None
+            case 'Frequency response':
+                self.id_bouton_compute =  BOUTON_COMPUTE_HZ
                 
         self.flux_audio = f_audio
         self.flux_audio_ref = None
@@ -128,8 +134,8 @@ class Plot(wx.Panel):
         self.bp_arrw = None
         self.peak_mark = None
         self.sig_audio = None
-        self.fft_audio = None
-        self.fft_audio_ref = None
+        self.mod_fft = None
+        self.mod_fft_ref = None
         self.max_module = 1
         self.best_debug = False
         self.slider_t_beg = None
@@ -157,35 +163,37 @@ class Plot(wx.Panel):
                               self.flux_audio.Fe
         presentation_fenetre = wx.BoxSizer(wx.VERTICAL)
 
-        style_texte = wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
-        self.slider_t_beg = wx.Slider(self,
-                    id=self.id_slider_beg,
-                    value=self.t_beg,
-                    minValue=0,
-                    maxValue=self.t_end,
-                    style=style_texte,
-                    name="t begin")
-        self.slider_t_end = wx.Slider(self,
-                    id=self.id_slider_end,
-                    value=self.t_end,
-                    minValue=self.t_beg+1,
-                    maxValue=self.flux_audio.taille_buffer_signal,
-                    style=style_texte,
-                    name="t end")
-        self.slider_t_beg.Bind(wx.EVT_SCROLL_CHANGED,
-                                self.change_slider,
-                                self.slider_t_beg,
-                                self.id_slider_beg)
-        self.slider_t_end.Bind(wx.EVT_SCROLL_CHANGED,
-                        self.change_slider,
-                        self.slider_t_end,
-                        self.id_slider_end)
-        st_texte = wx.StaticText(self, label="begining index")
-        presentation_fenetre.Add(st_texte, 0, wx.CENTER)
-        presentation_fenetre.Add(self.slider_t_beg, 0, wx.EXPAND)
-        st_texte = wx.StaticText(self, label="end index")
-        presentation_fenetre.Add(st_texte, 0, wx.CENTER)
-        presentation_fenetre.Add(self.slider_t_end, 0, wx.EXPAND)
+        if self.id_slider_end is not None:
+            style_texte = wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+            self.slider_t_beg = wx.Slider(self,
+                        id=self.id_slider_beg,
+                        value=self.t_beg,
+                        minValue=0,
+                        maxValue=self.t_end,
+                        style=style_texte,
+                        name="t begin")
+            self.slider_t_beg.Bind(wx.EVT_SCROLL_CHANGED,
+                                    self.change_slider,
+                                    self.slider_t_beg,
+                                    self.id_slider_beg)
+            st_texte = wx.StaticText(self, label="begining index")
+            presentation_fenetre.Add(st_texte, 0, wx.CENTER)
+            presentation_fenetre.Add(self.slider_t_beg, 0, wx.EXPAND)
+        if self.id_slider_end is not None:
+            self.slider_t_end = wx.Slider(self,
+                        id=self.id_slider_end,
+                        value=self.t_end,
+                        minValue=self.t_beg+1,
+                        maxValue=self.flux_audio.taille_buffer_signal,
+                        style=style_texte,
+                        name="t end")
+            self.slider_t_end.Bind(wx.EVT_SCROLL_CHANGED,
+                            self.change_slider,
+                            self.slider_t_end,
+                            self.id_slider_end)
+            st_texte = wx.StaticText(self, label="end index")
+            presentation_fenetre.Add(st_texte, 0, wx.CENTER)
+            presentation_fenetre.Add(self.slider_t_end, 0, wx.EXPAND)
         presentation_status = wx.BoxSizer(wx.HORIZONTAL)
         presentation_fenetre.Add(self.canvas, 1, wx.EXPAND)
         presentation_status.Add(self.toolbar, 0)
@@ -198,6 +206,11 @@ class Plot(wx.Panel):
             bouton = wx.Button(self, id=self.id_bouton_normaliser, label='Normalize')
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.Bind(wx.EVT_BUTTON, self.normaliser, bouton)
+            presentation_status.Add(bouton,0, wx.CENTER)
+        if self.id_bouton_compute is not None:
+            bouton = wx.Button(self, id=self.id_bouton_compute, label='Compute')
+            bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+            bouton.Bind(wx.EVT_BUTTON, self.compute_hz, bouton)
             presentation_status.Add(bouton,0, wx.CENTER)
         self.info_curseur = wx.StaticText(self, label=100 * " ")
         self.info_curseur.SetFont(self.font)
@@ -220,9 +233,15 @@ class Plot(wx.Panel):
             self.t_beg = tps_beg
             self.slider_t_beg.SetValue(self.t_beg)
         self.maj_limite_slider()
+        self.init_axe()
 
     def normaliser(self, _evt):
         self.init_axe()
+
+    def compute_hz(self, _evt):
+        if not self.samp_in_progress and self.flux_audio_ref is not None:
+            self.flux_audio_ref.compute_frequency_response(self.flux_audio.plotdata[:, 0])
+            self.init_axe()
 
     def maj_limite_slider(self):
         self.slider_t_end.SetMax(self.flux_audio.taille_buffer_signal)
@@ -259,7 +278,7 @@ class Plot(wx.Panel):
         idx = np.argmin(np.abs(self.val_x-x))
         n_min = max(idx - 1000, idx_min)
         n_max = min(idx + 1000, idx_max)
-        idx = np.argmin(np.abs(y - self.fft_audio[n_min : n_max]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
+        idx = np.argmin(np.abs(y - self.mod_fft[n_min : n_max]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
         return idx
 
 
@@ -278,9 +297,9 @@ class Plot(wx.Panel):
                             texte = [format(v,".3e") for v in a ]
                             self.info_curseur.SetLabel("Ech= " + str(idx) + " y=" + '/'.join(texte))
                     case 'dft_modulus':
-                         if self.flux_audio.plotdata is not None and self.fft_audio is not None:
+                         if self.flux_audio.plotdata is not None and self.mod_fft is not None:
                             idx = self.localise_freq(x, y)
-                            a = self.fft_audio[idx]
+                            a = self.mod_fft[idx]
                             texte = "f= " + self.flux_audio.get_format_precision(idx * idx_freq) + "(Hz)  module=" + format(a,".6e")
                             self.info_curseur.SetLabel(10 * " " + texte)
             if event.key == 'alt' and self.type_courbe == 'time':
@@ -299,19 +318,19 @@ class Plot(wx.Panel):
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
                 print('Selected frequency ', self.flux_audio.get_format_precision(idx  * idx_freq), "Hz")
-                print('Module ', format(self.fft_audio[idx], '.4e')," u.a.")
+                print('Module ', format(self.mod_fft[idx], '.4e')," u.a.")
                 bp_level = 10**(self.flux_audio.set_bp_level()/10)
-                bp_inf = np.where(self.fft_audio[0:idx+1] < self.fft_audio[idx] * bp_level)
+                bp_inf = np.where(self.mod_fft[0:idx+1] < self.mod_fft[idx] * bp_level)
                 if bp_inf[0].shape[0] > 0:
                     idx_inf = bp_inf[0][-1]
                 else:
                     idx_inf =  0
-                bp_sup = np.where(self.fft_audio[idx+1:self.flux_audio.tfd_size//2] < self.fft_audio[idx] * bp_level)
+                bp_sup = np.where(self.mod_fft[idx+1:self.flux_audio.tfd_size//2] < self.mod_fft[idx] * bp_level)
                 if bp_sup[0].shape[0] > 0:
                     idx_sup = bp_sup[0][0]+idx+1
                 else:
                     idx_sup =  self.flux_audio.tfd_size//2
-                print('Width at height ', format(self.fft_audio[idx] * bp_level, '.4e'), end='')
+                print('Width at height ', format(self.mod_fft[idx] * bp_level, '.4e'), end='')
                 texte = 'BP = '+ self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq) + 'Hz'
                 print(texte)
                 print('Limits = ', idx_inf * idx_freq, 'Hz <-> ',  idx_sup * idx_freq, 'Hz', end='')
@@ -322,30 +341,30 @@ class Plot(wx.Panel):
                     self.bp_arrw.remove()
                 self.bp_arrw = self.graphique.annotate(
                                         '',
-                                        xy=(idx_inf * idx_freq, self.fft_audio[idx]* bp_level),
-                                        xytext=(idx_sup * idx_freq, self.fft_audio[idx]* bp_level),
+                                        xy=(idx_inf * idx_freq, self.mod_fft[idx]* bp_level),
+                                        xytext=(idx_sup * idx_freq, self.mod_fft[idx]* bp_level),
                                         arrowprops=dict(arrowstyle='<->'))
-                self.bp_line = self.graphique.hlines(self.fft_audio[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
+                self.bp_line = self.graphique.hlines(self.mod_fft[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
                                                      colors='k')
-                self.bp_text = self.graphique.text((idx_sup  + idx_inf) * idx_freq / 2,self.fft_audio[idx]* bp_level,  texte)
+                self.bp_text = self.graphique.text((idx_sup  + idx_inf) * idx_freq / 2,self.mod_fft[idx]* bp_level,  texte)
                 #ratio = (idx_sup - idx_inf) * idx_freq * 0.05
-                #self.bp_line = self.graphique.arrow(self.fft_audio[idx]/2, idx_inf * idx_freq - ratio, ratio, ratio)
-                #self.bp_line = self.graphique.arrow(self.fft_audio[idx]/2, idx_sup * idx_freq , ratio, ratio)
+                #self.bp_line = self.graphique.arrow(self.mod_fft[idx]/2, idx_inf * idx_freq - ratio, ratio, ratio)
+                #self.bp_line = self.graphique.arrow(self.mod_fft[idx]/2, idx_sup * idx_freq , ratio, ratio)
 
                 self.canvas.draw()
             if event.key == 'control' and self.type_courbe == 'dft_modulus':
-                if self.flux_audio.plotdata is not None and self.fft_audio is not None:
+                if self.flux_audio.plotdata is not None and self.mod_fft is not None:
                     idx = self.localise_freq(x, y)
                     print('Selected frequency  ', format(idx * idx_freq,'.5e'), "Hz")
                     bp_level = 10**(self.flux_audio.set_bp_level()/10)
-                    pos_peak, _ = signal.find_peaks(self.fft_audio,
-                                                    height= self.fft_audio[idx] * bp_level,
+                    pos_peak, _ = signal.find_peaks(self.mod_fft,
+                                                    height= self.mod_fft[idx] * bp_level,
                                                     distance=self.flux_audio.set_peak_distance())
                     nb_peak = 0
                     for p in pos_peak:                   
                         if p > 0 and p < self.flux_audio.tfd_size // 2:
                             print('F ', self.flux_audio.get_format_precision(p * idx_freq), "Hz",
-                                  'M ', format(self.fft_audio[p], '.4e')," u.a.")
+                                  'M ', format(self.mod_fft[p], '.4e')," u.a.")
                             nb_peak = nb_peak + 1
                             if nb_peak>=100:
                                 print("Number of peaks is greater than 100")
@@ -356,7 +375,7 @@ class Plot(wx.Panel):
                         if self.peak_mark is not None:
                             for line in self.peak_mark:
                                 line.remove()
-                        self.peak_mark = self.graphique.plot(pos_peak[pos] * idx_freq, self.fft_audio[pos_peak[pos]], "x")
+                        self.peak_mark = self.graphique.plot(pos_peak[pos] * idx_freq, self.mod_fft[pos_peak[pos]], "x")
                         self.canvas.draw()
 
 
@@ -377,12 +396,16 @@ class Plot(wx.Panel):
         ratio = self.flux_audio.Fe / tfd_size
         self.val_x = np.arange(self.flux_audio.set_k_min(), self.flux_audio.set_k_max(), self.pas)
         self.val_x = self.val_x * ratio
-        spec_selec = self.fft_audio[self.flux_audio.set_k_min():
+        spec_selec = self.mod_fft[self.flux_audio.set_k_min():
                                     self.flux_audio.set_k_max():self.pas]
         self.max_module = spec_selec.max()
         if self.max_module == 0:
             self.max_module = 1
         self.lines = self.graphique.plot(self.val_x, spec_selec)
+        self.graphique.axis((self.flux_audio.set_k_min() * ratio,
+                             self.flux_audio.set_k_max() * ratio,
+                             0,
+                             1.1 * self.max_module))
         if not self.samp_in_progress and self.flux_audio_ref is not None:
             if self.lines_ref is not None:
                 for line in self.lines_ref:
@@ -392,14 +415,11 @@ class Plot(wx.Panel):
             self.lines_ref = self.graphique.plot(self.flux_audio_ref.frequency,
                                                  self.flux_audio_ref.spec_selec * k_norm,
                                                  color='red')
-        self.graphique.axis((self.flux_audio.set_k_min() * ratio,
-                             self.flux_audio.set_k_max() * ratio,
-                             0,
-                             1.1 * self.max_module))
-        self.graphique.legend(['channel ' + str(c)
-                                for c in range(self.flux_audio.nb_canaux)],
-                                loc='upper right',
-                                ncol=self.flux_audio.nb_canaux)
+            self.graphique.legend(['channel 0','Spectrum reference'],
+                                  loc='upper right')
+        else:
+            self.graphique.legend(['channel 0'],
+                                  loc='upper right')
 
     def init_axe_spectro(self):
         plotdata = self.flux_audio.plotdata[self.t_beg:self.t_end, 0]
@@ -434,6 +454,9 @@ class Plot(wx.Panel):
                                            cmap='magma')
 
     def init_axe(self):
+        """
+        Initialisation des axes pour tous les onglets
+        """
         if self.flux_audio.plotdata is None:
             return
         if self.lines is not None:
@@ -451,14 +474,19 @@ class Plot(wx.Panel):
             print( self.flux_audio.set_tfd_size())
             print( self.flux_audio.set_k_min())
             print( self.flux_audio.set_k_max())
-        if self.type_courbe == 'time':
+        if self.type_courbe == 'Frequency response':
+            if not self.samp_in_progress and self.flux_audio_ref is not None:
+                N = self.flux_audio_ref.frequency.shape[0]
+                self.graphique.plot(self.flux_audio_ref.frequency, np.abs(self.flux_audio_ref.freq_response[0:N]).real)
+                self.canvas.draw()
+        elif self.type_courbe == 'time':
             self.init_axe_time()
         elif self.type_courbe == 'dft_modulus':
             self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
             tfd_size = self.flux_audio.set_tfd_size()
-            z = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
-            self.fft_audio = np.abs(z).real / self.flux_audio.Fe
-            self.max_module = self.fft_audio.max()
+            self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
+            self.mod_fft = np.abs(self.fft).real / self.flux_audio.Fe
+            self.max_module = self.mod_fft.max()
             self.init_axe_fft()
         elif self.type_courbe == 'spectrogram':
             spectro_size = self.t_end - self.t_beg # self.flux_audio.spectro_size
@@ -507,11 +535,11 @@ class Plot(wx.Panel):
 
     def update_axe_fft(self, _evt):
         try:
-            self.fft_audio = self.file_attente.get_nowait()
-            max_fft = np.max(self.fft_audio[1:])
+            self.mod_fft = self.file_attente.get_nowait()
+            max_fft = np.max(self.mod_fft[1:])
             if max_fft > self.max_module:
                 self.max_module = max_fft
-            spec_selec = self.fft_audio[self.flux_audio.set_k_min():
+            spec_selec = self.mod_fft[self.flux_audio.set_k_min():
                                         self.flux_audio.set_k_max():self.pas]
             """
             val_x = np.arange(self.flux_audio.set_k_min(),
