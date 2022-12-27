@@ -92,6 +92,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.duration = -1
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
         self.flux_audio_ref = None
+        self.oscilloscope = None
         self.install_menu()
         self.parent.Show()
         self.type_window = ['boxcar', 'triang', 'blackman', 'hamming',
@@ -128,6 +129,7 @@ class InterfaceAnalyseur(wx.Panel):
         """
         fonction appelée lorsqu'un périphérique
         est sélectionné dans le menu audio_in :
+        ouverture du périphérique, 
         activation de l'interface d'acquisition et
         ajout d'une marque sur l'article sélectionné
         """
@@ -148,6 +150,8 @@ class InterfaceAnalyseur(wx.Panel):
         if self.choix_freq is not None:
             self.maj_choix_freq()
         print(self.flux_audio.nb_canaux, self.flux_audio.taille_buffer_signal)
+        if self.oscilloscope:
+            self.oscilloscope.maj_limite_slider()
 
     def disable_item_check(self, indexe=1):
         """
@@ -196,18 +200,18 @@ class InterfaceAnalyseur(wx.Panel):
         self.note_book.Refresh(True)
         self.note_book.SetSize(self.parent.GetClientSize())
         frame = wx.Frame(None, -1,
-                         'Mes Courbes',
+                         'Oscilloscope',
                          style=wx.DEFAULT_FRAME_STYLE &
                          (~wx.CLOSE_BOX) &
                          (~wx.MAXIMIZE_BOX))
-        plotter = fc.PlotNotebook(frame,
-                                  self.flux_audio,
-                                  evt_type=self.id_evt)
-        _ = plotter.add('Time Signal', type_courbe='time')
-        _ = plotter.add('Spectral', type_courbe='dft_modulus')
-        _ = plotter.add('Spectrogram', type_courbe='spectrogram')
-        _ = plotter.add('Frequency response', type_courbe='Frequency response')
-        self.flux_audio.courbe = plotter
+        self.oscilloscope = fc.PlotNotebook(frame,
+                                            self.flux_audio,
+                                            evt_type=self.id_evt)
+        _ = self.oscilloscope.add('Time Signal', type_courbe='time')
+        _ = self.oscilloscope.add('Spectral', type_courbe='dft_modulus')
+        _ = self.oscilloscope.add('Spectrogram', type_courbe='spectrogram')
+        _ = self.oscilloscope.add('Frequency response', type_courbe='Frequency response')
+        self.flux_audio.courbe = self.oscilloscope
 
         frame.Show()
 
@@ -218,7 +222,7 @@ class InterfaceAnalyseur(wx.Panel):
         """
         self.liste_periph = self.flux_audio.get_device()
         self.idmenu_audio_in = {-1: -1}
-        self.idmenu_audio_in = {x['name']: idx
+        self.idmenu_audio_in = {x['name'] + ':' + sd.query_hostapis(x['hostapi']) ['name']: idx
                                 for idx, x in enumerate(self.liste_periph)
                                 if x['max_input_channels'] >= 1}
         self.idmenu_audio_out = {-1: -1}
@@ -277,14 +281,14 @@ class InterfaceAnalyseur(wx.Panel):
                 wx.MessageBox("Sampling frequency are not equal\n "+ str(self.flux_audio.Fe) + "Hz<> " +str(Fe), "Error", wx.ICON_ERROR)
                 return
             self.flux_audio_ref = fluxaudio.Signal(freq=Fe, fenetre=son.shape[0], canaux=len(son.shape), s_array=son, file_name=nom_fichier_son)
-            self.flux_audio.courbe.page[0].flux_audio_ref = self.flux_audio_ref
-            self.flux_audio.courbe.page[1].flux_audio_ref = self.flux_audio_ref
-            self.flux_audio.courbe.page[2].flux_audio_ref = self.flux_audio_ref
-            self.flux_audio.courbe.page[3].flux_audio_ref = self.flux_audio_ref
+            self.oscilloscope.page[0].flux_audio_ref = self.flux_audio_ref
+            self.oscilloscope.page[1].flux_audio_ref = self.flux_audio_ref
+            self.oscilloscope.page[2].flux_audio_ref = self.flux_audio_ref
+            self.oscilloscope.page[3].flux_audio_ref = self.flux_audio_ref
             self.flux_audio_ref.compute_spectrum()
             print("Sample size (ref) ", son.shape)
             print("Sample size (sig) ", self.flux_audio.plotdata.shape)
-            print("Sample size (sig) selected", self.flux_audio.courbe.page[0].t_beg, self.flux_audio.courbe.page[0].t_end)
+            print("Sample size (sig) selected", self.oscilloscope.page[0].t_beg, self.oscilloscope.page[0].t_end)
             # self.flux_audio.courbe.draw_page(None)
 
     def open_wav(self, _):
@@ -303,9 +307,9 @@ class InterfaceAnalyseur(wx.Panel):
                 wx.MessageBox("Sampling frequency are not equal\n "+ str(self.flux_audio.Fe) + "Hz<> " +str(Fe), "Error", wx.ICON_ERROR)
                 return
             nb_ech = min(son.shape[0], self.flux_audio.plotdata.shape[0])
-            self.flux_audio.courbe.page[0].t_beg = self.flux_audio.plotdata.shape[0] - nb_ech
-            self.flux_audio.courbe.page[0].t_end = self.flux_audio.taille_buffer_signal
-            self.flux_audio.courbe.page[0].maj_limite_slider()
+            self.oscilloscope.page[0].t_beg = self.flux_audio.plotdata.shape[0] - nb_ech
+            self.oscilloscope.page[0].t_end = self.flux_audio.taille_buffer_signal
+            self.oscilloscope.page[0].maj_limite_slider()
             if len(son.shape) == 1:
                 self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] += son[:nb_ech]
             else:
@@ -318,8 +322,8 @@ class InterfaceAnalyseur(wx.Panel):
             # wx.MessageBox("Update sampling modified\n New value "+str(nb_ech), "Warning", wx.ICON_WARNING)
             # w = wx.Window.FindWindowById(UPDATE_ECH)
             # w.SetLabel(str(self.flux_audio.nb_ech_fenetre))
-            self.flux_audio.courbe.page[0].courbe_active = True
-            self.flux_audio.courbe.draw_all_axis()
+            self.oscilloscope.page[0].courbe_active = True
+            self.oscilloscope.draw_all_axis()
             # self.flux_audio.courbe.draw_page(None)
 
     def quitter(self, _):
@@ -548,10 +552,10 @@ class InterfaceAnalyseur(wx.Panel):
         idx = self.choix_freq.GetCurrentSelection()
         chaine_freq = self.choix_freq.GetString(idx)
         self.flux_audio.set_frequency(float(chaine_freq))
-        self.flux_audio.courbe.maj_limite_slider()
+        self.oscilloscope.maj_limite_slider()
         self.update_spectro_interface()
         self.update_tfd_interface()
-        self.flux_audio.courbe.draw_all_axis()
+        self.oscilloscope.draw_all_axis()
 
     def ajouter_page_spectrogram(self, name="Spectrogram"):
         """
@@ -742,12 +746,11 @@ class InterfaceAnalyseur(wx.Panel):
                 self.dico_slider[SLIDER_OVERLAP_SPECTRO][0](val-1)
                 self.update_spectro_interface()
         if self.dico_slider[id_fenetre][1] is not None:
-            self.flux_audio.courbe.draw_all_axis()
-            r_upd = self.flux_audio.courbe.GetClientRect()
-            self.flux_audio.courbe.Refresh(rect=r_upd)
-            # self.flux_audio.courbe.draw_page(None)
+            self.oscilloscope.draw_all_axis()
+            r_upd = self.oscilloscope.GetClientRect()
+            self.oscilloscope.Refresh(rect=r_upd)
             if not self.samp_in_progress and self.dico_slider[id_fenetre][1] is not None:
-                self.flux_audio.courbe.maj_page(self.dico_slider[id_fenetre][1])
+                self.oscilloscope.maj_page(self.dico_slider[id_fenetre][1])
 
     def change_tfd_size(self, event):
         """
@@ -766,13 +769,12 @@ class InterfaceAnalyseur(wx.Panel):
         w = wx.Window.FindWindowById(SLIDER_F_MAX_TFD)
         if w is not None:
             self.dico_slider[SLIDER_F_MAX_TFD][0](w.GetValue())
-        if self.flux_audio.courbe.page[1].courbe_active:
-            self.flux_audio.courbe.draw_all_axis()
-            r_upd = self.flux_audio.courbe.GetClientRect()
-            self.flux_audio.courbe.Refresh(rect=r_upd)
-            # self.flux_audio.courbe.draw_page(None)
+        if self.oscilloscope.page[1].courbe_active:
+            self.oscilloscope.draw_all_axis()
+            r_upd = self.oscilloscope.GetClientRect()
+            self.oscilloscope.Refresh(rect=r_upd)
         if not self.samp_in_progress:
-            self.flux_audio.courbe.maj_page(self.dico_slider[SLIDER_F_MAX_TFD][1])
+            self.oscilloscope.maj_page(self.dico_slider[SLIDER_F_MAX_TFD][1])
 
 
     def change_spectro_size(self, event):
@@ -796,13 +798,13 @@ class InterfaceAnalyseur(wx.Panel):
             self.dico_slider[SLIDER_WINDOW_SIZE_SPECTRO][0](self.dico_slider[SLIDER_SPECTRO_SIZE][0]() - 1)
             if self.dico_slider[SLIDER_WINDOW_SIZE_SPECTRO][0]() < self.dico_slider[SLIDER_OVERLAP_SPECTRO][0]():
                 self.dico_slider[SLIDER_OVERLAP_SPECTRO][0](self.dico_slider[SLIDER_WINDOW_SIZE_SPECTRO][0]()-1)
-        if self.flux_audio.courbe.page[2].courbe_active:
-            self.flux_audio.courbe.draw_all_axis()
-            r_upd = self.flux_audio.courbe.GetClientRect()
-            self.flux_audio.courbe.Refresh(rect=r_upd)
+        if self.oscilloscope.page[2].courbe_active:
+            self.oscilloscope.draw_all_axis()
+            r_upd = self.oscilloscope.GetClientRect()
+            self.oscilloscope.Refresh(rect=r_upd)
             print("refresh")
         if not self.samp_in_progress:
-            self.flux_audio.courbe.maj_page(self.dico_slider[SLIDER_F_MAX_SPECTRO][1])
+            self.oscilloscope.maj_page(self.dico_slider[SLIDER_F_MAX_SPECTRO][1])
  
 
     def update_spectro_interface(self):
@@ -816,7 +818,7 @@ class InterfaceAnalyseur(wx.Panel):
         if overlap:
             overlap.SetMax(self.flux_audio.win_size_spectro-1)
         if not self.samp_in_progress:
-            self.flux_audio.courbe.maj_page('spectrogram') #self.flux_audio.courbe.draw_page(None)
+            self.oscilloscope.maj_page('spectrogram') 
 
     def update_tfd_interface(self):
         low = wx.Window.FindWindowById(SLIDER_F_MIN_TFD)
@@ -825,9 +827,9 @@ class InterfaceAnalyseur(wx.Panel):
         high = wx.Window.FindWindowById(SLIDER_F_MAX_TFD)
         if high:
             high.SetMax(int(self.flux_audio.set_frequency()//2))
-        self.flux_audio.courbe.draw_all_axis()
+        self.oscilloscope.draw_all_axis()
         if not self.samp_in_progress:
-            self.flux_audio.courbe.maj_page("spectrogram")
+            self.oscilloscope.maj_page("spectrogram")
 
     def ajouter_bouton(self, bouton, ctrl, ma_grille, font, option=wx.EXPAND):
         bouton[0].SetFont(font)
@@ -878,15 +880,14 @@ class InterfaceAnalyseur(wx.Panel):
             self.update_tfd_interface()
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             bouton.SetLabel(self.dico_label[id_fenetre][1])
-            self.flux_audio.courbe.page[ind_page].courbe_active = True
-            self.flux_audio.courbe.draw_all_axis()
-            # self.flux_audio.courbe.draw_page(None)
+            self.oscilloscope.page[ind_page].courbe_active = True
+            self.oscilloscope.draw_all_axis()
 
         else:
             print("DesActivation courbe")
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.SetLabel(self.dico_label[id_fenetre][0])
-            self.flux_audio.courbe.page[ind_page].courbe_active = False
+            self.oscilloscope.page[ind_page].courbe_active = False
 
     def on_save(self, _):
         """
@@ -935,7 +936,7 @@ class InterfaceAnalyseur(wx.Panel):
             self.flux_audio.set_frequency(int(float(chaine_freq)))
             self.set_window_size()
             self.set_time_length()
-            self.flux_audio.courbe.draw_all_axis()
+            self.oscilloscope.draw_all_axis()
             if not self.flux_audio.open_stream(self.idx_periph_in):
                 self.disable_item_check()
                 wx.MessageBox("Cannot opened input device : input disable",
@@ -944,21 +945,21 @@ class InterfaceAnalyseur(wx.Panel):
                 return
             self.update_spectro_interface()
             self.update_tfd_interface()
-            for page in self.flux_audio.courbe.page:
+            for page in self.oscilloscope.page:
                 page.samp_in_progress = False
-            self.flux_audio.courbe.page[0].courbe_active = True
+            self.oscilloscope.page[0].courbe_active = True
             bouton.SetLabel("Stop")
             bouton.SetBackgroundColour(wx.Colour(255, 0, 0))
             self.figer_parametre(True)
             self.samp_in_progress = True
         else:
             self.flux_audio.close()
-            self.flux_audio.courbe.page[0].courbe_active = False
+            self.oscilloscope.page[0].courbe_active = False
             bouton.SetLabel("Start")
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             self.figer_parametre(False)
             self.samp_in_progress = False
-            for page in self.flux_audio.courbe.page:
+            for page in self.oscilloscope.page:
                 page.samp_in_progress = False
 
     def figer_parametre(self, enable):

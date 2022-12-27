@@ -52,6 +52,7 @@ class Signal:
         self.frequency =  None # pour le signal de référence
         self.spec_selec = None
         self.freq_response = None
+        self.offset_synchro = 1 # décalage entre signal et référence
 
     def set_bp_level(self, val=None):
         if val is not None and -10 <= val <=-1:
@@ -134,10 +135,11 @@ class Signal:
         les fréquences vérifiant que module de 
         la fft > threshold max(fft)
         """
-        offset_synchro = self.synchroniser(self.plotdata, signal)
-        if offset_synchro>0:
+        self.offset_synchro = self.synchroniser(self.plotdata, signal)
+        offset_synchro = self.offset_synchro
+        if self.offset_synchro>0:
             return False, "Unable to syncronize signal"
-        if offset_synchro + self.plotdata.shape[0] >= signal.shape[0]:
+        if self.offset_synchro + self.plotdata.shape[0] >= signal.shape[0]:
             return False, "Synchro enable but signal size too small"
         fft_output =  np.fft.fft(signal[-offset_synchro: -offset_synchro + self.plotdata.shape[0]])
         self.freq_response = np.zeros(shape=(self.plotdata.shape[0],1), dtype=np.float64)

@@ -244,11 +244,16 @@ class Plot(wx.Panel):
             self.init_axe()
 
     def maj_limite_slider(self):
-        self.slider_t_end.SetMax(self.flux_audio.taille_buffer_signal)
-        self.slider_t_end.SetMin(min(self.flux_audio.taille_buffer_signal-1, self.slider_t_beg.GetValue()))
-        self.slider_t_beg.SetMax(self.flux_audio.taille_buffer_signal)
-        self.slider_t_beg.SetValue(self.t_beg)
-        self.slider_t_end.SetValue(self.t_end)
+        if self.slider_t_end is not None:
+            self.slider_t_end.SetMax(self.flux_audio.taille_buffer_signal)
+            self.slider_t_end.SetMin(min(self.flux_audio.taille_buffer_signal-1, self.slider_t_beg.GetValue()))
+            if self.t_end > self.flux_audio.taille_buffer_signal:
+                self.t_end = self.flux_audio.taille_buffer_signal
+        if self.slider_t_beg is not None:
+            self.slider_t_beg.SetMax(self.flux_audio.taille_buffer_signal)
+            self.slider_t_beg.SetValue(self.t_beg)
+        if self.slider_t_end is not None:
+            self.slider_t_end.SetValue(self.t_end)
 
     def change_slider(self, event):
         """
@@ -389,6 +394,15 @@ class Plot(wx.Panel):
                                 for c in range(self.flux_audio.nb_canaux)],
                                 loc='lower left',
                                 ncol=self.flux_audio.nb_canaux)
+        if self.flux_audio_ref is not None:
+            d = self.flux_audio_ref.offset_synchro
+            scale = max(1, (self.t_end - self.t_beg) // 2000)
+            if d>0:
+                self.lines_ref = self.graphique.plot(self.flux_audio_ref.plotdata[::scale])
+            else:
+                n = self.flux_audio_ref.plotdata.shape[0]
+                self.lines_ref = self.graphique.plot(np.arange(-d, -d+n, scale), self.flux_audio_ref.plotdata[::scale])
+
 
     def init_axe_fft(self):
         self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
@@ -464,9 +478,14 @@ class Plot(wx.Panel):
                 ligne.remove()
         if self.image:
             self.image.remove()
+        if self.lines_ref:
+            for ligne in self.lines_ref:
+                ligne.remove()
+
         self.figure.gca().set_prop_cycle(None)
         self.lines = None
         self.image = None
+        self.lines_ref = None
         plotdata = self.flux_audio.plotdata
         
         if self.best_debug:
@@ -576,7 +595,7 @@ class PlotNotebook(wx.Panel):
         self.SetSizer(sizer)
         self.parent = parent
         self.clock = time.perf_counter()
-        self.Bind(evt_type, self.draw_page)
+        self.Bind(evt_type, self.draw_pages)
         self.clock = 0
 
     def add(self, name="plot", type_courbe='time'):
@@ -589,14 +608,14 @@ class PlotNotebook(wx.Panel):
 
         return page
 
-    def draw_page(self, _evt):
+    def draw_pages(self, _evt):
         """ tracé de la courbe associé à l'onglet
         """
 
-        if time.perf_counter() - self.clock < 3*self.flux_audio.tps_refresh:
-            self.evt_process = True
-            return
-        self.clock = time.perf_counter()
+        # if time.perf_counter() - self.clock < 3*self.flux_audio.tps_refresh:
+        #    self.evt_process = True
+        #    return
+        # self.clock = time.perf_counter()
         nb_data = self.flux_audio.new_sample()
         if nb_data > self.flux_audio.nb_ech_fenetre:
             self.page[0].nb_data = 0
