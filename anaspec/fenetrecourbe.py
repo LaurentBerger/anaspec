@@ -41,6 +41,8 @@ BOUTON_COPY_SPECTRO = 8203
 BOUTON_COMPUTE_HZ = 8204
 
 
+
+
 class CalculFFT(threading.Thread):
     """ calcul de la fft en utilisant un thread
     et envoie d'un événement en fin de calcul
@@ -96,6 +98,7 @@ class Plot(wx.Panel):
         self.id_bouton_copie =  None
         self.id_bouton_normaliser =  None
         self.id_bouton_compute =  None
+        self.palette = None
         match type_courbe:
             case 'time':
                 self.id_slider_beg = SLIDER_T_BEG
@@ -117,6 +120,7 @@ class Plot(wx.Panel):
                 PAGE_PLOT_SPECTRO = self
                 EVENT_SPECTRO = self.new_event_spectro
                 self.id_bouton_copie =  BOUTON_COPY_SPECTRO
+                self.palette = matplotlib.colormaps['magma']
             case 'Frequency response':
                 self.id_bouton_compute =  BOUTON_COMPUTE_HZ
                 
@@ -212,6 +216,9 @@ class Plot(wx.Panel):
             bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
             bouton.Bind(wx.EVT_BUTTON, self.compute_hz, bouton)
             presentation_status.Add(bouton,0, wx.CENTER)
+
+
+
         self.info_curseur = wx.StaticText(self, label=100 * " ")
         self.info_curseur.SetFont(self.font)
         presentation_status.Add(self.info_curseur,0, wx.CENTER)
@@ -465,7 +472,7 @@ class Plot(wx.Panel):
                                            interpolation=None,
                                            filternorm=False,
                                            resample=False,
-                                           cmap='magma')
+                                           cmap=self.palette)
 
     def init_axe(self):
         """
@@ -624,6 +631,17 @@ class PlotNotebook(wx.Panel):
                     page.draw_page()
                     page.canvas.draw()
         self.evt_process = True
+
+    def maj_palette(self, page_name, pal_name):
+        """ changement de palette 
+        """
+        for page in self.page:
+            if page.type_courbe == page_name:
+                page.palette = matplotlib.colormaps[pal_name]
+                if page_name == 'spectrogram':
+                    page.init_axe()
+                page.draw_page()
+                page.canvas.draw()
 
     def maj_page(self, page_name):
         """ tracé de la courbe associé à l'onglet

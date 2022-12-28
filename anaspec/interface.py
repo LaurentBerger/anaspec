@@ -7,6 +7,7 @@ d'échantillon, du recouvrement, du type de fenêtrage
 """
 # pylint: disable=maybe-no-member
 import sys
+import ctypes.wintypes
 import soundfile
 import sounddevice as sd
 import wx
@@ -37,10 +38,43 @@ SLIDER_BP_VALUE = 4001
 SLIDER_PEAK_DISTANCE = 4002
 
 ID_OPEN_REF = 1101
+CHOICE_PALETTE = 3007
+
 
 
 PARAM1_WINDOW_TYPE = COMBO_WINDOW_TYPE + 2
 PARAM2_WINDOW_TYPE = PARAM1_WINDOW_TYPE + 2
+
+# https://matplotlib.org/stable/tutorials/colors/colormaps.html#lightness-of-matplotlib-colormaps
+PALETTE_NAME = ['viridis', 'plasma', 'inferno', 'magma', 'cividis',
+                'Pastel1', 'Pastel2', 'Paired', 'Accent', 'Dark2',
+                'Set1', 'Set2', 'Set3', 'tab10', 'tab20', 'tab20b',
+                'tab20c',
+                'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
+                'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
+                'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn',
+                'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone',
+                'pink', 'spring', 'summer', 'autumn', 'winter', 'cool',
+                'Wistia', 'hot', 'afmhot', 'gist_heat', 'copper',
+                'PiYG', 'PRGn', 'BrBG', 'PuOr', 'RdGy', 'RdBu', 'RdYlBu',
+                'RdYlGn', 'Spectral', 'coolwarm', 'bwr', 'seismic',
+                'twilight', 'twilight_shifted', 'hsv',
+                'flag', 'prism', 'ocean', 'gist_earth', 'terrain',
+                'gist_stern', 'gnuplot', 'gnuplot2', 'CMRmap',
+                'cubehelix', 'brg', 'gist_rainbow', 'rainbow', 'jet',
+                'turbo', 'nipy_spectral', 'gist_ncar'
+                ]
+
+
+# https://stackoverflow.com/questions/59778250/how-to-disable-quickedit-mode-with-python
+def disable_quick_edit_mode():
+    kernel32 = ctypes.WinDLL('kernel32')
+    dword_for_std_input_handle = ctypes.wintypes.DWORD(-10) # https://learn.microsoft.com/en-us/windows/console/getstdhandle
+    dword_for_enable_extended_flags = ctypes.wintypes.DWORD(0x0080) # https://learn.microsoft.com/en-us/windows/console/setconsolemode
+    std_input_handle = kernel32.GetStdHandle(dword_for_std_input_handle)
+    kernel32.SetConsoleMode(std_input_handle, dword_for_enable_extended_flags)
+    last_error = kernel32.GetLastError()
+    return last_error
 
 
 class InterfaceAnalyseur(wx.Panel):
@@ -123,6 +157,7 @@ class InterfaceAnalyseur(wx.Panel):
                             'tukey': ('alpha', None)}
         self.flux_audio.type_window = self.type_window[0]
         self.choix_freq =  None # liste de choix pour les fréquences
+        self.choix_palette = None # liste des palettes disponibles pour l'affichage du spectrogramme
         self.samp_in_progress = False
 
     def select_audio_in(self, event):
@@ -188,7 +223,7 @@ class InterfaceAnalyseur(wx.Panel):
         sizer = wx.BoxSizer()
         sizer.Add(self.note_book, 1, wx.EXPAND)
         self.SetSizer(sizer)
-        self.ctrl = []
+        self.ctrl = [] # liste contenant les listes des contrôles ajoutés dans chaque onglet
         self.dico_label = {0: ('Enable', 'Disable', 0)}
         self.dico_slider = {0: None}
         self.ind_page = 0
@@ -219,6 +254,9 @@ class InterfaceAnalyseur(wx.Panel):
     def install_menu(self):
         """
         Installation des menus
+        Les menus input device et output device sont construits
+        à partir des listes des périphériques d'éntrée et de sortie obtenues
+        par soundevice
         """
         self.liste_periph = self.flux_audio.get_device()
         self.idmenu_audio_in = {-1: -1}
@@ -269,7 +307,7 @@ class InterfaceAnalyseur(wx.Panel):
     def open_wav_ref(self, _):
         """
         ouvrir un fichier wav et utiliser les données 
-        comme l'entrée d'un système
+        comme l'entrée appliquée à un système
         """
         if self.flux_audio.plotdata is None:
                wx.MessageBox("First choose peripherical in input device menu", "Error", wx.ICON_ERROR)
@@ -289,11 +327,10 @@ class InterfaceAnalyseur(wx.Panel):
             print("Sample size (ref) ", son.shape)
             print("Sample size (sig) ", self.flux_audio.plotdata.shape)
             print("Sample size (sig) selected", self.oscilloscope.page[0].t_beg, self.oscilloscope.page[0].t_end)
-            # self.flux_audio.courbe.draw_page(None)
-
+ 
     def open_wav(self, _):
         """
-        ouvrir un fichier wav et utilisé les données 
+        ouvrir un fichier wav et utiliser les données 
         de la même manière que l'acquisition
         """
         if self.flux_audio.plotdata is None:
@@ -355,26 +392,6 @@ class InterfaceAnalyseur(wx.Panel):
         st_texte = wx.StaticText(page, label="")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
-        """        
-        st_texte = wx.StaticText(page, label="TFD size",)
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
-        min_v = self.flux_audio.set_tfd_size()
-        st_texte = wx.Slider(page,
-                             id=SLIDER_TFD_SIZE,
-                             value=min_v,
-                             minValue=MIN_TFD_SIZE,
-                             maxValue=self.flux_audio.taille_buffer_signal,
-                             style=style_texte,
-                             name="SIZE_TFD")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        st_texte.Bind(wx.EVT_SCROLL,
-                      self.change_tfd_size,
-                      st_texte,
-                      SLIDER_TFD_SIZE)
-        self.dico_slider[SLIDER_TFD_SIZE] =(self.flux_audio.set_tfd_size, 'dft_modulus')
-        """
-
         st_texte = wx.StaticText(page, label="Low frequency (Hz)")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
@@ -416,7 +433,9 @@ class InterfaceAnalyseur(wx.Panel):
     def ajouter_page_parameters(self, name="Parameters"):
         """
         création de l'onglet Parameters
-        pour paramétrer les mesures
+        pour paramétrer la hauteur où est mesurée
+        la bande passante et l'espacement entre les pics pour
+        la détection des pics
         """
         ctrl = []
         page = wx.Panel(self.note_book)
@@ -443,7 +462,7 @@ class InterfaceAnalyseur(wx.Panel):
                       SLIDER_BP_VALUE)
         self.dico_slider[SLIDER_BP_VALUE] = (self.flux_audio.set_bp_level, None)
 
-        st_texte = wx.StaticText(page, label="Distancen in samples between neighbouring peaks")
+        st_texte = wx.StaticText(page, label="Distance in samples between neighbouring peaks")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         st_texte = wx.Slider(page,
                              id=SLIDER_PEAK_DISTANCE,
@@ -468,7 +487,8 @@ class InterfaceAnalyseur(wx.Panel):
     def ajouter_page_acquisition(self, name="Sampling"):
         """
         création de l'onglet Sampling
-        pour paramétrer l'acquisitions
+        pour paramétrer la fréquence d'acquisition et
+        le temps de rafraichissment de l'oscilloscope
         """
         ctrl = []
         page = wx.Panel(self.note_book)
@@ -508,15 +528,14 @@ class InterfaceAnalyseur(wx.Panel):
         self.choix_freq.Bind(wx.EVT_CHOICE, self.maj_interface_freq)
         self.ajouter_bouton((self.choix_freq, 1), ctrl, ma_grille, font)
 
-        # st_texte = wx.TextCtrl(page, value=str(self.flux_audio.Fe))
-        # self.ajouter_bouton((st_texte, 1), ctrl, ma_grille, font)
-
+        """
         st_texte = wx.StaticText(page,
                                  label="recording Time (-1 for infinite)")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
         st_texte = wx.TextCtrl(page, value="-1", id=RECORDING_TIME)
         self.ajouter_bouton((st_texte, 1), ctrl, ma_grille, font)
+        """
 
         st_texte = wx.StaticText(page, label="# sampling before update ")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -532,6 +551,10 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page = self.ind_page + 1
 
     def maj_choix_freq(self):
+        """
+        Mise à jour des fréquences d'acquition
+        disponibles lors du choix du périphérique d'entrée
+        """
         self.choix_freq.Clear()
         choix = []
         for val_freq in self.flux_audio.frequence_dispo:
@@ -549,6 +572,10 @@ class InterfaceAnalyseur(wx.Panel):
 
 
     def maj_interface_freq(self, event):
+        """
+        Mise à jour des extrêmums des glissières de la sélection
+        des fréquences en fonction de la fréquence d'échantillonnage
+        """
         idx = self.choix_freq.GetCurrentSelection()
         chaine_freq = self.choix_freq.GetString(idx)
         self.flux_audio.set_frequency(float(chaine_freq))
@@ -653,6 +680,21 @@ class InterfaceAnalyseur(wx.Panel):
                       SLIDER_OVERLAP_SPECTRO)
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
 
+        st_texte = wx.StaticText(page, label="Palette")
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        choix = []
+        palette_name = sorted(PALETTE_NAME)
+        for name_p in palette_name:
+            choix.append(name_p)
+        self.choix_palette = wx.Choice(page, choices=choix)
+        idx = self.choix_palette.FindString("grey")
+        if idx !=  wx.NOT_FOUND:
+            self.choix_palette.SetSelection(idx)
+        else:
+            self.choix_palette.SetSelection(0)
+        self.choix_palette.Bind(wx.EVT_CHOICE, self.maj_palette)
+        self.ajouter_bouton((self.choix_palette, 1), ctrl, ma_grille, font)
+
         """
         st_texte = wx.StaticText(page, label="Window")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
@@ -689,51 +731,22 @@ class InterfaceAnalyseur(wx.Panel):
         self.ctrl.append(ctrl)
         self.ind_page = self.ind_page + 1
 
-    def change_fenetrage(self, event):
-        """
-        Changement du type de fenêtre pour la tfd
-        """
-        id_fenetre = event.GetId()
-        obj = event.GetEventObject()
-        val = obj.GetValue()
-        if id_fenetre == COMBO_WINDOW_TYPE:
-            self.flux_audio.type_window = val
-            self.change_param_window()
 
-    def change_param_window(self):
+    def maj_palette(self, evt):
         """
-        Création des articles pour
-        régler les paramètres de la fenêtres
+        Mise à jour de la palette
+        pour l'affichage du spectrogramme
         """
-        if self.flux_audio.type_window not in self.dico_window:
-            return
-        param = self.dico_window[self.flux_audio.type_window]
-        for idx in range(PARAM1_WINDOW_TYPE-1, PARAM2_WINDOW_TYPE+1):
-            fen = wx.Window.FindWindowById(idx)
-            fen.Enable(False)
-            fen.Show(False)
-        if param is None:
-            return
-        fen = wx.Window.FindWindowById(PARAM1_WINDOW_TYPE-1)
-        if fen is not None:
-            for idx in range(PARAM1_WINDOW_TYPE-1, PARAM1_WINDOW_TYPE+1):
-                fen = wx.Window.FindWindowById(idx)
-                fen.Enable(True)
-                fen.Show(True)
-            fen.SetLabel(param[0])
-        if len(param) == 1:
-            return
-        fen = wx.Window.FindWindowById(PARAM2_WINDOW_TYPE-1)
-        if fen is not None:
-            for idx in range(PARAM2_WINDOW_TYPE-1, PARAM2_WINDOW_TYPE+1):
-                fen = wx.Window.FindWindowById(idx)
-                fen.Enable(True)
-                fen.Show(True)
-            fen.SetLabel(param[1])
+        idx = self.choix_palette.GetCurrentSelection()
+        pal_name = self.choix_palette.GetString(idx)
+        self.oscilloscope.maj_palette("spectrogram", pal_name)
+
+
 
     def change_slider(self, event):
         """
-        réglage des glissiéres
+        Réglage des glissiéres et
+        mise à jour des fenêtres
         """
         obj = event.GetEventObject()
         val = obj.GetValue()
@@ -807,6 +820,51 @@ class InterfaceAnalyseur(wx.Panel):
             self.oscilloscope.maj_page(self.dico_slider[SLIDER_F_MAX_SPECTRO][1])
  
 
+    def change_fenetrage(self, event):
+        """
+        Changement du type de fenêtre pour la tfd
+        INUTILISER
+        """
+        id_fenetre = event.GetId()
+        obj = event.GetEventObject()
+        val = obj.GetValue()
+        if id_fenetre == COMBO_WINDOW_TYPE:
+            self.flux_audio.type_window = val
+            self.change_param_window()
+
+    def change_param_window(self):
+        """
+        Création des articles pour
+        régler les paramètres de la fenêtre spectrale
+        INUTILISER
+        """
+        if self.flux_audio.type_window not in self.dico_window:
+            return
+        param = self.dico_window[self.flux_audio.type_window]
+        for idx in range(PARAM1_WINDOW_TYPE-1, PARAM2_WINDOW_TYPE+1):
+            fen = wx.Window.FindWindowById(idx)
+            fen.Enable(False)
+            fen.Show(False)
+        if param is None:
+            return
+        fen = wx.Window.FindWindowById(PARAM1_WINDOW_TYPE-1)
+        if fen is not None:
+            for idx in range(PARAM1_WINDOW_TYPE-1, PARAM1_WINDOW_TYPE+1):
+                fen = wx.Window.FindWindowById(idx)
+                fen.Enable(True)
+                fen.Show(True)
+            fen.SetLabel(param[0])
+        if len(param) == 1:
+            return
+        fen = wx.Window.FindWindowById(PARAM2_WINDOW_TYPE-1)
+        if fen is not None:
+            for idx in range(PARAM2_WINDOW_TYPE-1, PARAM2_WINDOW_TYPE+1):
+                fen = wx.Window.FindWindowById(idx)
+                fen.Enable(True)
+                fen.Show(True)
+            fen.SetLabel(param[1])
+
+
     def update_spectro_interface(self):
         low = wx.Window.FindWindowById(SLIDER_F_MIN_SPECTRO)
         if low:
@@ -845,7 +903,7 @@ class InterfaceAnalyseur(wx.Panel):
         return None
 
     def set_window_size(self):
-        texte_article = self.ctrl[0][7][0].GetValue()
+        texte_article = self.ctrl[0][5][0].GetValue()
         nb_ech_fenetre = int(texte_article)
         if nb_ech_fenetre > 0:
             self.flux_audio.nb_ech_fenetre = nb_ech_fenetre
@@ -857,6 +915,7 @@ class InterfaceAnalyseur(wx.Panel):
         """
         Modification de la durée d'acquisition
         en utilisant l'article
+        INUTILISER PLUS  D ARTICLE
         """
         texte_article = self.ctrl[0][5][0].GetValue()
         self.duration = int(texte_article)
@@ -913,10 +972,13 @@ class InterfaceAnalyseur(wx.Panel):
 
     def on_play(self, _):
         """
-        Ecouter le signal enregistré
+        Ecoute du signal enregistré
         """
         print("try to play on default output")
-        sd.play(self.flux_audio.plotdata, self.flux_audio.Fe, mapping=[1, 2])
+        try:
+            sd.play(self.flux_audio.plotdata, self.flux_audio.Fe, mapping=[1, 2])
+        except Exception as e:
+            wx.LogError("Cannot play signal :\n",type(e), str(e) )        
 
 
     def on_start_stop(self, event):
@@ -935,7 +997,7 @@ class InterfaceAnalyseur(wx.Panel):
             chaine_freq = self.choix_freq.GetString(idx)
             self.flux_audio.set_frequency(int(float(chaine_freq)))
             self.set_window_size()
-            self.set_time_length()
+            # self.set_time_length()
             self.oscilloscope.draw_all_axis()
             if not self.flux_audio.open_stream(self.idx_periph_in):
                 self.disable_item_check()
@@ -982,4 +1044,5 @@ if __name__ == '__main__':
     my_plotter = InterfaceAnalyseur(my_frame)
     my_frame.Show()
     wx.MessageBox("First choose peripherical in input device menu", "Warning", wx.ICON_WARNING)
+    disable_quick_edit_mode()
     application.MainLoop()
