@@ -8,6 +8,7 @@ d'échantillon, du recouvrement, du type de fenêtrage
 # pylint: disable=maybe-no-member
 import sys
 import ctypes.wintypes
+import numpy as np
 import soundfile
 import sounddevice as sd
 import wx
@@ -44,6 +45,8 @@ CHOICE_PALETTE = 3007
 
 PARAM1_WINDOW_TYPE = COMBO_WINDOW_TYPE + 2
 PARAM2_WINDOW_TYPE = PARAM1_WINDOW_TYPE + 2
+PARAM3_WINDOW_TYPE = PARAM2_WINDOW_TYPE + 2
+
 
 # https://matplotlib.org/stable/tutorials/colors/colormaps.html#lightness-of-matplotlib-colormaps
 PALETTE_NAME = ['viridis', 'plasma', 'inferno', 'magma', 'cividis',
@@ -150,11 +153,24 @@ class InterfaceAnalyseur(wx.Panel):
                             'kaiser': ('beta', None),
                             'gaussian': ('std', None),
                             'general_gaussian': ('p', 'sig', None),
-                            'slepian': ('bandwidth', None),
                             'dpss': ('NW', 'Kmax', 'norm', None),
                             'chebwin': ('at', None),
-                            'exponential': ('tau', None),
+                            'exponential': ('tau', 'center', None),
                             'tukey': ('alpha', None)}
+        # nom_parametre:(type, valeur actuelle, valeur minimale, valeur maximale)
+        self.dico_parameter = {'beta': ('float', 14, 0, np.PINF),
+                               'std': ('float', 1, 0, np.PINF),
+                               'p': ('float', 1, 0, np.PINF),
+                               'sig': ('float', 1, 0, np.PINF),
+                               'NW': ('float', 0.25, 0, 0.5),
+                               'Kmax': ('float', 1, 0, np.PINF),
+                               'norm': ('list', (2, 'approximate', 'subsample')),
+                               'at': ('float', 100, 0, np.PINF),
+                               'tau': ('float', 100, 0, np.PINF),
+                               'center': ('float', 512, 0, np.PINF),
+                               'alpha': ('float', 0.5, 0, np.PINF),
+
+                               }
         self.flux_audio.type_window = self.type_window[0]
         self.choix_freq =  None # liste de choix pour les fréquences
         self.choix_palette = None # liste des palettes disponibles pour l'affichage du spectrogramme
@@ -478,11 +494,136 @@ class InterfaceAnalyseur(wx.Panel):
                       SLIDER_PEAK_DISTANCE)
         self.dico_slider[SLIDER_PEAK_DISTANCE] = (self.flux_audio.set_peak_distance, None)
 
+        st_texte = wx.StaticText(page, label="Window")
+        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
+        st_texte = wx.ComboBox(page,
+                               id=COMBO_WINDOW_TYPE,
+                               choices=self.type_window)
+        self.ajouter_bouton((st_texte, 0),
+                            ctrl,
+                            ma_grille,
+                            font,
+                            wx.Centre)
+        st_texte.SetSelection(self.type_window.index(
+            self.flux_audio.type_window)+1)
+        st_texte.Bind(wx.EVT_COMBOBOX,
+                      self.change_fenetrage,
+                      st_texte,
+                      COMBO_WINDOW_TYPE)
+        self.nb_parametre_max = 3
+        presentation_parametre = wx.GridSizer(rows=self.nb_parametre_max, cols=2, vgap=5, hgap=5)
+        for idx in range(self.nb_parametre_max):
+            st_texte = wx.StaticText(page, id=PARAM1_WINDOW_TYPE + 2*idx, label="")
+            presentation_parametre.Add(st_texte)
+            if idx < 2:
+                new_ctrl = wx.TextCtrl(page,
+                                       id=PARAM1_WINDOW_TYPE+1+ 2*idx,
+                                       value=str(0),
+                                       style=wx.TE_PROCESS_ENTER)
+                new_ctrl.Bind(wx.EVT_TEXT,
+                              self.update_fenetrage,
+                              new_ctrl,
+                              PARAM1_WINDOW_TYPE+1+ 2*idx)
+            else:
+                new_ctrl = wx.Choice(page, id=PARAM1_WINDOW_TYPE+1+ 2*idx, choices=[])
+            presentation_parametre.Add(new_ctrl)
+        self.change_param_window()
+        ma_grille.Add(presentation_parametre)
+    
+
+
         page.SetSizerAndFit(ma_grille)
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.ind_page = self.ind_page + 1
 
+
+    def update_fenetrage(self, event):
+        """
+        une valeur des paramètres a été chnagée
+        """
+        id_fenetre = event.GetId()
+        obj = event.GetEventObject()
+        val = obj.GetValue()
+        try:
+            val_num = float(val)
+        except ValueError as e:
+            wx.LogError(val + " is not a number")
+            return
+        param = self.dico_window[self.flux_audio.type_window]
+        if param is None:
+            wx.LogError("Should not happen in update_fenetrage for dico")
+            return
+        try:
+            if id_fenetre == PARAM1_WINDOW_TYPE+1: # premier parametre
+                param_ctrl = self.dico_parameter[param[0]]
+                if param_ctrl[2] <= val_num <= param_ctrl[3]:
+                    p = (param_ctrl[0], val_num, param_ctrl[2], param_ctrl[3])
+                    self.dico_parameter[param[0]] = p
+            elif id_fenetre == PARAM1_WINDOW_TYPE+3: # second parametre
+                param_ctrl = self.dico_parameter[param[1]]
+                if param_ctrl[2] <= val_num <= param_ctrl[3]:
+                    p = (param_ctrl[0], val_num, param_ctrl[2], param_ctrl[3])
+                    self.dico_parameter[param[1]] = p
+            else:
+                wx.LogError("Should not happen in update_fenetrage")
+                return
+        except ValueError as e:
+            wx.LogError("Should not happen in update_fenetrage for dico_parameter")
+            return
+    def change_fenetrage(self, event):
+        """
+        Changement du type de fenêtre pour la tfd et
+        le spectrogramme
+        """
+        id_fenetre = event.GetId()
+        obj = event.GetEventObject()
+        val = obj.GetValue()
+        if id_fenetre == COMBO_WINDOW_TYPE:
+            self.flux_audio.type_window = val
+            self.change_param_window()
+
+    def change_param_window(self):
+        """
+        Activation ou désactivation des articles des 
+        paramètres du fenêtrage en
+        fonction de la fenêtre spectrale
+        """
+        if self.flux_audio.type_window not in self.dico_window:
+            return
+        for idx in range(0, 2*self.nb_parametre_max):
+            fen = wx.Window.FindWindowById(idx + PARAM1_WINDOW_TYPE)
+            if fen is not None:
+                fen.Enable(False)
+                fen.Show(False)
+        """        
+        fen = wx.Window.FindWindowById(PARAM1_WINDOW_TYPE-1)
+        if fen is not None:
+            fen.Enable(False)
+            fen.Show(False)
+        fen = wx.Window.FindWindowById(PARAM2_WINDOW_TYPE-1)
+        if fen is not None:
+            fen.Enable(False)
+            fen.Show(False)
+        """
+        param = self.dico_window[self.flux_audio.type_window]
+        idx_param = 0
+        while param is not None and param[idx_param] is  not None:
+            for idx in range(0, 2):
+                fen = wx.Window.FindWindowById(idx_param*2 + PARAM1_WINDOW_TYPE + idx)
+                if fen is not None:
+                    fen.Enable(True)
+                    fen.Show(True)
+                if idx == 0:
+                    fen.SetLabel(param[idx_param])
+                else:
+                    try:
+                        x = self.dico_parameter[param[idx_param]]
+                        if x[0] != 'list':
+                            fen.SetValue(str(x[1]))
+                    except KeyError as e:
+                        wx.LogError("Should not happen with window parameter")     
+            idx_param =  idx_param + 1
 
     def ajouter_page_acquisition(self, name="Sampling"):
         """
@@ -694,38 +835,6 @@ class InterfaceAnalyseur(wx.Panel):
             self.choix_palette.SetSelection(0)
         self.choix_palette.Bind(wx.EVT_CHOICE, self.maj_palette)
         self.ajouter_bouton((self.choix_palette, 1), ctrl, ma_grille, font)
-
-        """
-        st_texte = wx.StaticText(page, label="Window")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        st_texte = wx.ComboBox(page,
-                               id=COMBO_WINDOW_TYPE,
-                               choices=self.type_window)
-        self.ajouter_bouton((st_texte, 0),
-                            ctrl,
-                            ma_grille,
-                            font,
-                            wx.Centre)
-        st_texte.SetSelection(self.type_window.index(
-            self.flux_audio.type_window)+1)
-        st_texte.Bind(wx.EVT_COMBOBOX,
-                      self.change_fenetrage,
-                      st_texte,
-                      COMBO_WINDOW_TYPE)
-        st_texte = wx.StaticText(page, id=PARAM1_WINDOW_TYPE-1, label="")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        st_texte = wx.TextCtrl(page,
-                               id=PARAM1_WINDOW_TYPE,
-                               value=str(self.flux_audio.Fe))
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-
-        st_texte = wx.StaticText(page, id=PARAM2_WINDOW_TYPE-1, label="")
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        st_texte = wx.TextCtrl(page,
-                               id=PARAM2_WINDOW_TYPE,
-                               value=str(self.flux_audio.Fe))
-        self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
-        """
         page.SetSizerAndFit(ma_grille)
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
@@ -819,50 +928,6 @@ class InterfaceAnalyseur(wx.Panel):
         if not self.samp_in_progress:
             self.oscilloscope.maj_page(self.dico_slider[SLIDER_F_MAX_SPECTRO][1])
  
-
-    def change_fenetrage(self, event):
-        """
-        Changement du type de fenêtre pour la tfd
-        INUTILISER
-        """
-        id_fenetre = event.GetId()
-        obj = event.GetEventObject()
-        val = obj.GetValue()
-        if id_fenetre == COMBO_WINDOW_TYPE:
-            self.flux_audio.type_window = val
-            self.change_param_window()
-
-    def change_param_window(self):
-        """
-        Création des articles pour
-        régler les paramètres de la fenêtre spectrale
-        INUTILISER
-        """
-        if self.flux_audio.type_window not in self.dico_window:
-            return
-        param = self.dico_window[self.flux_audio.type_window]
-        for idx in range(PARAM1_WINDOW_TYPE-1, PARAM2_WINDOW_TYPE+1):
-            fen = wx.Window.FindWindowById(idx)
-            fen.Enable(False)
-            fen.Show(False)
-        if param is None:
-            return
-        fen = wx.Window.FindWindowById(PARAM1_WINDOW_TYPE-1)
-        if fen is not None:
-            for idx in range(PARAM1_WINDOW_TYPE-1, PARAM1_WINDOW_TYPE+1):
-                fen = wx.Window.FindWindowById(idx)
-                fen.Enable(True)
-                fen.Show(True)
-            fen.SetLabel(param[0])
-        if len(param) == 1:
-            return
-        fen = wx.Window.FindWindowById(PARAM2_WINDOW_TYPE-1)
-        if fen is not None:
-            for idx in range(PARAM2_WINDOW_TYPE-1, PARAM2_WINDOW_TYPE+1):
-                fen = wx.Window.FindWindowById(idx)
-                fen.Enable(True)
-                fen.Show(True)
-            fen.SetLabel(param[1])
 
 
     def update_spectro_interface(self):
@@ -1040,7 +1105,7 @@ class InterfaceAnalyseur(wx.Panel):
 
 if __name__ == '__main__':
     application = wx.App()
-    my_frame = wx.Frame(None, -1, 'Interface')
+    my_frame = wx.Frame(None, -1, 'Interface',size=(660,330))
     my_plotter = InterfaceAnalyseur(my_frame)
     my_frame.Show()
     wx.MessageBox("First choose peripherical in input device menu", "Warning", wx.ICON_WARNING)

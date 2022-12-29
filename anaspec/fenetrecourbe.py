@@ -47,9 +47,13 @@ class CalculFFT(threading.Thread):
     """ calcul de la fft en utilisant un thread
     et envoie d'un événement en fin de calcul
     """
-    def __init__(self, x, fe):
+    def __init__(self, x, fe, fenetre='boxcar', param=None):
         threading.Thread.__init__(self)
-        self.x = x.copy()
+        if fenetre != 'boxcar':
+            w = signal.get_window(fenetre, x.shape[0])
+            self.x = x.copy() * w
+        else:
+            self.x = x.copy()
         self.Fe = fe
     
     def run(self):
@@ -285,13 +289,14 @@ class Plot(wx.Panel):
         idx_min, idx_max = self.graphique.get_xlim()
         y_min, y_max = self.graphique.get_ylim()
         print(idx_min, idx_max, x, y)
-        idx_min = int(np.round(idx_min /idx_freq))
-        idx_max = int(np.round(idx_max /idx_freq))
+        offset = self.flux_audio.set_k_min()
+        idx_min = int(np.round(idx_min / idx_freq)) - offset
+        idx_max = int(np.round(idx_max / idx_freq)) - offset
         idx = np.argmin(np.abs(self.val_x-x))
         n_min = max(idx - 1000, idx_min)
         n_max = min(idx + 1000, idx_max)
-        idx = np.argmin(np.abs(y - self.mod_fft[n_min : n_max]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
-        return idx
+        idx = np.argmin(np.abs(y - self.mod_fft[n_min + offset : n_max + offset]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
+        return idx + offset
 
 
     def UpdateCurseur(self, event):
@@ -510,7 +515,12 @@ class Plot(wx.Panel):
         elif self.type_courbe == 'dft_modulus':
             self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
             tfd_size = self.flux_audio.set_tfd_size()
-            self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
+            if self.flux_audio.type_fenetre != ('boxcar'):
+                w = signal.get_window(self.flux_audio.type_fenetre,
+                                      self.t_end - self.t_beg + 1)
+                self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0] * w)
+            else:
+                self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
             self.mod_fft = np.abs(self.fft).real / self.flux_audio.Fe
             self.max_module = self.mod_fft.max()
             self.init_axe_fft()
@@ -545,7 +555,10 @@ class Plot(wx.Panel):
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                self.thread_fft = CalculFFT(plot_data[self.t_beg:self.t_end,column], self.flux_audio.Fe)
+                if self.flux_audio.type_fenetre != ('boxcar'):
+                    self.thread_fft = CalculFFT(plot_data[self.t_beg:self.t_end,column], self.flux_audio.Fe, self.flux_audio.type_fenetre)
+                else:
+                    self.thread_fft = CalculFFT(plot_data[self.t_beg:self.t_end,column], self.flux_audio.Fe)
                 self.thread_fft.start()
             self.auto_adjust = True
             return self.lines
