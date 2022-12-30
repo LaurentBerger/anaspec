@@ -39,6 +39,7 @@ SLIDER_BP_VALUE = 4001
 SLIDER_PEAK_DISTANCE = 4002
 
 ID_OPEN_REF = 1101
+ID_LOG = 1102
 CHOICE_PALETTE = 3007
 
 
@@ -79,6 +80,13 @@ def disable_quick_edit_mode():
     last_error = kernel32.GetLastError()
     return last_error
 
+class LogOscillo(wx.LogWindow):
+    def __init__(self,pParent, szTitle, show=True, passToOld=True):
+        wx.LogWindow.__init__(self, pParent, szTitle, show, passToOld)
+    
+    def OnFrameClose(self, frame):
+        self.Show(False)
+        return False
 
 class InterfaceAnalyseur(wx.Panel):
     """
@@ -130,6 +138,8 @@ class InterfaceAnalyseur(wx.Panel):
         self.flux_audio = fluxaudio.FluxAudio(self.new_event)
         self.flux_audio_ref = None
         self.oscilloscope = None
+        self.log = LogOscillo(None, "Oscilloscope Logger", show=True, passToOld=False)
+
         self.install_menu()
         self.parent.Show()
         self.type_window = ['boxcar', 'triang', 'blackman', 'hamming',
@@ -153,25 +163,25 @@ class InterfaceAnalyseur(wx.Panel):
                             'kaiser': ('beta', None),
                             'gaussian': ('std', None),
                             'general_gaussian': ('p', 'sig', None),
-                            'dpss': ('NW', 'Kmax', 'norm', None),
+                            'dpss': ('NW (normalize)', None), # 'dpss': ('NW', 'Kmax', 'norm', None),
                             'chebwin': ('at', None),
-                            'exponential': ('tau', 'center', None),
+                            'exponential': ('tau', 'center (normalize)', None),
                             'tukey': ('alpha', None)}
         # nom_parametre:(type, valeur actuelle, valeur minimale, valeur maximale)
-        self.dico_parameter = {'beta': ('float', 14, 0, np.PINF),
-                               'std': ('float', 1, 0, np.PINF),
-                               'p': ('float', 1, 0, np.PINF),
-                               'sig': ('float', 1, 0, np.PINF),
-                               'NW': ('float', 0.25, 0, 0.5),
-                               'Kmax': ('float', 1, 0, np.PINF),
-                               'norm': ('list', (2, 'approximate', 'subsample')),
-                               'at': ('float', 100, 0, np.PINF),
-                               'tau': ('float', 100, 0, np.PINF),
-                               'center': ('float', 512, 0, np.PINF),
-                               'alpha': ('float', 0.5, 0, np.PINF),
+        self.dico_parameter = {'beta': ('float', 14, 0, np.PINF, False),
+                               'std': ('float', 1, 0, np.PINF, True),
+                               'p': ('float', 1, 0, np.PINF, False),
+                               'sig': ('float', 1, 0, np.PINF, False),
+                               'NW (normalize)': ('float', 0.25, 0, 0.5, True),
+                               'Kmax': ('float', 1, 0, np.PINF, False),
+                               'norm': ('list', (2, 'approximate', 'subsample'), False),
+                               'at': ('float', 100, 0, np.PINF, False),
+                               'tau': ('float', 100, 0, np.PINF, False),
+                               'center (normalize)': ('float', 0.5, 0, np.PINF, True),
+                               'alpha': ('float', 0.5, 0, np.PINF, False),
 
                                }
-        self.flux_audio.type_window = self.type_window[0]
+        self.flux_audio.type_window = [self.type_window[0]]
         self.choix_freq =  None # liste de choix pour les fréquences
         self.choix_palette = None # liste des palettes disponibles pour l'affichage du spectrogramme
         self.samp_in_progress = False
@@ -200,7 +210,7 @@ class InterfaceAnalyseur(wx.Panel):
             self.init_interface = True
         if self.choix_freq is not None:
             self.maj_choix_freq()
-        print(self.flux_audio.nb_canaux, self.flux_audio.taille_buffer_signal)
+        wx.LogMessage("Channel : " + str(self.flux_audio.nb_canaux) + " Buffer : " + str(self.flux_audio.taille_buffer_signal))
         if self.oscilloscope:
             self.oscilloscope.maj_limite_slider()
 
@@ -301,16 +311,41 @@ class InterfaceAnalyseur(wx.Panel):
              for idx, x in enumerate(self.idmenu_audio_out)]
         barre_menu.Append(menu_periph_out, 'output device')
         menu_about = wx.Menu()
+        _ = menu_about.Append(ID_LOG, 'Show log', 'Show log window')
         _ = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
         barre_menu.Append(menu_about, '&Help')
         self.parent.SetMenuBar(barre_menu)
         self.parent.Bind(wx.EVT_CLOSE, self.close_page)
+        self.parent.Bind(wx.EVT_MENU, self.about, id=wx.ID_ABOUT)
+        self.parent.Bind(wx.EVT_MENU, self.show_log, id=ID_LOG)
         self.parent.Bind(wx.EVT_MENU, self.open_wav, id=wx.ID_OPEN)
         self.parent.Bind(wx.EVT_MENU, self.open_wav_ref, id=ID_OPEN_REF)
         self.parent.Bind(wx.EVT_MENU, self.on_save, id=wx.ID_SAVE)
         self.parent.Bind(wx.EVT_MENU, self.quitter, id=wx.ID_EXIT)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_in, id=200, id2=299)
         self.parent.Bind(wx.EVT_MENU, self.select_audio_out, id=300, id2=399)
+
+    def about(self, evt):
+        """
+        About menu
+        """
+        wx.MessageBox("Anaspec : https://github.com/LaurentBerger/anaspec")
+
+    def hide_log(self, evt):
+        """
+        log menu to show log window
+        """
+        if self.log is not None:
+            self.log.Show(False)
+
+    def show_log(self, evt):
+        """
+        log menu to show log window
+        """
+        if self.log is None:
+            self.log = wx.LogWindow(None, "Oscilloscope Logger", show=True, passToOld=False)
+        else:
+            self.log.Show(True)
 
     def close_page(self, evt):
         """
@@ -340,9 +375,11 @@ class InterfaceAnalyseur(wx.Panel):
             self.oscilloscope.page[2].flux_audio_ref = self.flux_audio_ref
             self.oscilloscope.page[3].flux_audio_ref = self.flux_audio_ref
             self.flux_audio_ref.compute_spectrum()
-            print("Sample size (ref) ", son.shape)
-            print("Sample size (sig) ", self.flux_audio.plotdata.shape)
-            print("Sample size (sig) selected", self.oscilloscope.page[0].t_beg, self.oscilloscope.page[0].t_end)
+            wx.LogMessage("File name (ref): " + nom_fichier_son)
+            wx.LogMessage("Sample size (ref): " + str(son.shape))
+            wx.LogMessage("Sample size (sig): " + str(self.flux_audio.plotdata.shape))
+            wx.LogMessage("Sample size (sig) selected: " + str(self.oscilloscope.page[0].t_beg) +
+                          " " + str(self.oscilloscope.page[0].t_end))
  
     def open_wav(self, _):
         """
@@ -375,6 +412,11 @@ class InterfaceAnalyseur(wx.Panel):
             # wx.MessageBox("Update sampling modified\n New value "+str(nb_ech), "Warning", wx.ICON_WARNING)
             # w = wx.Window.FindWindowById(UPDATE_ECH)
             # w.SetLabel(str(self.flux_audio.nb_ech_fenetre))
+            wx.LogMessage("File name : " + nom_fichier_son)
+            wx.LogMessage("Sample size " + str(son.shape))
+            wx.LogMessage("Sample size (sig) " + str(self.flux_audio.plotdata.shape))
+            wx.LogMessage("Sample selected" + str(self.oscilloscope.page[0].t_beg) + 
+                          " " + str(self.oscilloscope.page[0].t_end))
             self.oscilloscope.page[0].courbe_active = True
             self.oscilloscope.draw_all_axis()
             # self.flux_audio.courbe.draw_page(None)
@@ -505,7 +547,7 @@ class InterfaceAnalyseur(wx.Panel):
                             font,
                             wx.Centre)
         st_texte.SetSelection(self.type_window.index(
-            self.flux_audio.type_window)+1)
+            self.flux_audio.type_window[0])+1)
         st_texte.Bind(wx.EVT_COMBOBOX,
                       self.change_fenetrage,
                       st_texte,
@@ -521,11 +563,15 @@ class InterfaceAnalyseur(wx.Panel):
                                        value=str(0),
                                        style=wx.TE_PROCESS_ENTER)
                 new_ctrl.Bind(wx.EVT_TEXT,
-                              self.update_fenetrage,
+                              self.update_fenetrage_num,
                               new_ctrl,
                               PARAM1_WINDOW_TYPE+1+ 2*idx)
             else:
                 new_ctrl = wx.Choice(page, id=PARAM1_WINDOW_TYPE+1+ 2*idx, choices=[])
+                new_ctrl.Bind(wx.EVT_TEXT,
+                              self.update_fenetrage_list,
+                              new_ctrl,
+                              PARAM1_WINDOW_TYPE+1+ 2*idx)
             presentation_parametre.Add(new_ctrl)
         self.change_param_window()
         ma_grille.Add(presentation_parametre)
@@ -538,7 +584,21 @@ class InterfaceAnalyseur(wx.Panel):
         self.ind_page = self.ind_page + 1
 
 
-    def update_fenetrage(self, event):
+    def update_fenetrage_list(self, event):
+        """
+        Changement du choix pour les paramètres
+        d'une fenêtre
+        INUTILISER
+        """
+        id_fenetre = event.GetId()
+        obj = event.GetEventObject()
+        val = obj.GetValue()
+        if id_fenetre == PARAM1_WINDOW_TYPE+5:
+            self.flux_audio.type_window[2] = val
+            self.change_param_window()
+
+
+    def update_fenetrage_num(self, event):
         """
         une valeur des paramètres a été chnagée
         """
@@ -550,7 +610,7 @@ class InterfaceAnalyseur(wx.Panel):
         except ValueError as e:
             wx.LogError(val + " is not a number")
             return
-        param = self.dico_window[self.flux_audio.type_window]
+        param = self.dico_window[self.flux_audio.type_window[0]]
         if param is None:
             wx.LogError("Should not happen in update_fenetrage for dico")
             return
@@ -560,17 +620,21 @@ class InterfaceAnalyseur(wx.Panel):
                 if param_ctrl[2] <= val_num <= param_ctrl[3]:
                     p = (param_ctrl[0], val_num, param_ctrl[2], param_ctrl[3])
                     self.dico_parameter[param[0]] = p
+                    win_para = self.flux_audio.type_window
+                    self.flux_audio.type_window[1] = val_num
             elif id_fenetre == PARAM1_WINDOW_TYPE+3: # second parametre
                 param_ctrl = self.dico_parameter[param[1]]
                 if param_ctrl[2] <= val_num <= param_ctrl[3]:
                     p = (param_ctrl[0], val_num, param_ctrl[2], param_ctrl[3])
                     self.dico_parameter[param[1]] = p
+                    self.flux_audio.type_window[2] = val_num
             else:
                 wx.LogError("Should not happen in update_fenetrage")
                 return
         except ValueError as e:
             wx.LogError("Should not happen in update_fenetrage for dico_parameter")
             return
+
     def change_fenetrage(self, event):
         """
         Changement du type de fenêtre pour la tfd et
@@ -580,7 +644,7 @@ class InterfaceAnalyseur(wx.Panel):
         obj = event.GetEventObject()
         val = obj.GetValue()
         if id_fenetre == COMBO_WINDOW_TYPE:
-            self.flux_audio.type_window = val
+            self.flux_audio.type_window = [val]
             self.change_param_window()
 
     def change_param_window(self):
@@ -589,7 +653,7 @@ class InterfaceAnalyseur(wx.Panel):
         paramètres du fenêtrage en
         fonction de la fenêtre spectrale
         """
-        if self.flux_audio.type_window not in self.dico_window:
+        if self.flux_audio.type_window[0] not in self.dico_window:
             return
         for idx in range(0, 2*self.nb_parametre_max):
             fen = wx.Window.FindWindowById(idx + PARAM1_WINDOW_TYPE)
@@ -606,7 +670,7 @@ class InterfaceAnalyseur(wx.Panel):
             fen.Enable(False)
             fen.Show(False)
         """
-        param = self.dico_window[self.flux_audio.type_window]
+        param = self.dico_window[self.flux_audio.type_window[0]]
         idx_param = 0
         while param is not None and param[idx_param] is  not None:
             for idx in range(0, 2):
@@ -619,8 +683,11 @@ class InterfaceAnalyseur(wx.Panel):
                 else:
                     try:
                         x = self.dico_parameter[param[idx_param]]
+                        self.flux_audio.type_window.append(x)
                         if x[0] != 'list':
                             fen.SetValue(str(x[1]))
+                        else:
+                            wx.LogError("parameter list not implemented") 
                     except KeyError as e:
                         wx.LogError("Should not happen with window parameter")     
             idx_param =  idx_param + 1
@@ -1108,6 +1175,9 @@ if __name__ == '__main__':
     my_frame = wx.Frame(None, -1, 'Interface',size=(660,330))
     my_plotter = InterfaceAnalyseur(my_frame)
     my_frame.Show()
-    wx.MessageBox("First choose peripherical in input device menu", "Warning", wx.ICON_WARNING)
+    
+    wx.LogWarning("Disbale quick-edit mode in console")
     disable_quick_edit_mode()
+    wx.LogWarning("First choose peripherical in input device menu")
+
     application.MainLoop()

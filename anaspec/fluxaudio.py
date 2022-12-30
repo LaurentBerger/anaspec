@@ -47,7 +47,7 @@ class Signal:
         self.set_k_max(self.f_max)
         self.f_min_spectro = 0
         self.f_max_spectro = self.Fe // 2
-        self.type_fenetre = ('boxcar')
+        self.type_window = ['boxcar']
         self.fft = None # pour le signal de référence
         self.frequency =  None # pour le signal de référence
         self.spec_selec = None

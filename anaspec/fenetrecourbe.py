@@ -288,7 +288,6 @@ class Plot(wx.Panel):
         idx_freq = self.flux_audio.Fe / self.flux_audio.tfd_size
         idx_min, idx_max = self.graphique.get_xlim()
         y_min, y_max = self.graphique.get_ylim()
-        print(idx_min, idx_max, x, y)
         offset = self.flux_audio.set_k_min()
         idx_min = int(np.round(idx_min / idx_freq)) - offset
         idx_max = int(np.round(idx_max / idx_freq)) - offset
@@ -304,8 +303,6 @@ class Plot(wx.Panel):
             idx_freq = self.flux_audio.Fe / self.flux_audio.tfd_size
             x, y = event.xdata, event.ydata
             if event.key == 'shift':
-                if event.button == 'down':
-                    print("OK")
                 match self.type_courbe:
                     case 'time':
                         if self.flux_audio.plotdata is not None:
@@ -313,6 +310,7 @@ class Plot(wx.Panel):
                             a = self.flux_audio.plotdata[-self.flux_audio.nb_ech_fenetre+idx,:]
                             texte = [format(v,".3e") for v in a ]
                             self.info_curseur.SetLabel("Ech= " + str(idx) + " y=" + '/'.join(texte))
+                            wx.LogMessage("Ech= " + str(idx) + " y=" + '/'.join(texte))
                     case 'dft_modulus':
                          if self.flux_audio.plotdata is not None and self.mod_fft is not None:
                             idx = self.localise_freq(x, y)
@@ -334,8 +332,8 @@ class Plot(wx.Panel):
                     self.canvas.draw()
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
-                print('Selected frequency ', self.flux_audio.get_format_precision(idx  * idx_freq), "Hz")
-                print('Module ', format(self.mod_fft[idx], '.4e')," u.a.")
+                wx.LogMessage('Selected frequency ' + str(self.flux_audio.get_format_precision(idx  * idx_freq)) + "Hz")
+                wx.LogMessage('Module ' + format(self.mod_fft[idx], '.4e') +" u.a.")
                 bp_level = 10**(self.flux_audio.set_bp_level()/10)
                 bp_inf = np.where(self.mod_fft[0:idx+1] < self.mod_fft[idx] * bp_level)
                 if bp_inf[0].shape[0] > 0:
@@ -347,11 +345,11 @@ class Plot(wx.Panel):
                     idx_sup = bp_sup[0][0]+idx+1
                 else:
                     idx_sup =  self.flux_audio.tfd_size//2
-                print('Width at height ', format(self.mod_fft[idx] * bp_level, '.4e'), end='')
+                wx.LogMessage('Width at height ' + format(self.mod_fft[idx] * bp_level, '.4e'))
                 texte = 'BP = '+ self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq) + 'Hz'
-                print(texte)
-                print('Limits = ', idx_inf * idx_freq, 'Hz <-> ',  idx_sup * idx_freq, 'Hz', end='')
-                print('Uncertainty  ', format(2 * self.flux_audio.Fe/self.flux_audio.tfd_size, '.4e'), "Hz")
+                wx.LogMessage(texte)
+                wx.LogMessage('Limits = ' + str(idx_inf * idx_freq) + 'Hz <-> ' +  str(idx_sup * idx_freq) + 'Hz')
+                wx.LogMessage('Uncertainty  ' + format(2 * self.flux_audio.Fe/self.flux_audio.tfd_size, '.4e') + "Hz")
                 if self.bp_line:
                     self.bp_line.remove()
                     self.bp_text.remove()
@@ -372,7 +370,7 @@ class Plot(wx.Panel):
             if event.key == 'control' and self.type_courbe == 'dft_modulus':
                 if self.flux_audio.plotdata is not None and self.mod_fft is not None:
                     idx = self.localise_freq(x, y)
-                    print('Selected frequency  ', format(idx * idx_freq,'.5e'), "Hz")
+                    wx.LogMessage('Selected frequency  ' + format(idx * idx_freq,'.5e') + "Hz")
                     bp_level = 10**(self.flux_audio.set_bp_level()/10)
                     pos_peak, _ = signal.find_peaks(self.mod_fft,
                                                     height= self.mod_fft[idx] * bp_level,
@@ -380,12 +378,13 @@ class Plot(wx.Panel):
                     nb_peak = 0
                     for p in pos_peak:                   
                         if p > 0 and p < self.flux_audio.tfd_size // 2:
-                            print('F ', self.flux_audio.get_format_precision(p * idx_freq), "Hz",
-                                  'M ', format(self.mod_fft[p], '.4e')," u.a.")
+                            texte = 'F ' + str(self.flux_audio.get_format_precision(p * idx_freq)) + "Hz" +\
+                                    'M ' + format(self.mod_fft[p], '.4e') + " u.a."
+                            wx.LogMessage(texte)
                             nb_peak = nb_peak + 1
                             if nb_peak>=100:
-                                print("Number of peaks is greater than 100")
-                                print("Stop iterating")
+                                wx.LogMessage("Number of peaks is greater than 100")
+                                wx.LogMessage("Stop iterating")
                                 break
                     if nb_peak <= 100:
                         pos = np.logical_and(pos_peak > 0, pos_peak < self.flux_audio.tfd_size // 2)
@@ -501,10 +500,10 @@ class Plot(wx.Panel):
         plotdata = self.flux_audio.plotdata
         
         if self.best_debug:
-            print( self.flux_audio.nb_ech_fenetre)
-            print( self.flux_audio.set_tfd_size())
-            print( self.flux_audio.set_k_min())
-            print( self.flux_audio.set_k_max())
+            wx.LogDebug(str(self.flux_audio.nb_ech_fenetre))
+            wx.LogDebug(str(self.flux_audio.set_tfd_size()))
+            wx.LogDebug(str(self.flux_audio.set_k_min()))
+            wx.LogDebug(str(self.flux_audio.set_k_max()))
         if self.type_courbe == 'Frequency response':
             if not self.samp_in_progress and self.flux_audio_ref is not None:
                 N = self.flux_audio_ref.frequency.shape[0]
@@ -515,9 +514,9 @@ class Plot(wx.Panel):
         elif self.type_courbe == 'dft_modulus':
             self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
             tfd_size = self.flux_audio.set_tfd_size()
-            if self.flux_audio.type_fenetre != ('boxcar'):
-                w = signal.get_window(self.flux_audio.type_fenetre,
-                                      self.t_end - self.t_beg + 1)
+            if self.flux_audio.type_window[0] != 'boxcar':
+                w = signal.get_window(tuple(self.flux_audio.type_window),
+                                      self.t_end - self.t_beg)
                 self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0] * w)
             else:
                 self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
@@ -555,8 +554,8 @@ class Plot(wx.Panel):
             if self.auto_adjust:
                 self.max_module = -1
             for column, line in enumerate(self.lines):
-                if self.flux_audio.type_fenetre != ('boxcar'):
-                    self.thread_fft = CalculFFT(plot_data[self.t_beg:self.t_end,column], self.flux_audio.Fe, self.flux_audio.type_fenetre)
+                if self.flux_audio.type_window != ('boxcar'):
+                    self.thread_fft = CalculFFT(plot_data[self.t_beg:self.t_end,column], self.flux_audio.Fe, self.flux_audio.type_window)
                 else:
                     self.thread_fft = CalculFFT(plot_data[self.t_beg:self.t_end,column], self.flux_audio.Fe)
                 self.thread_fft.start()
@@ -589,7 +588,7 @@ class Plot(wx.Panel):
             self.lines[0].set_ydata(spec_selec)
             return self.lines
         except queue.Empty:
-            print("Should not happen")
+            wx.LogError("Should not happen")
         return None
 
     def update_axe_spectrogram(self, _evt):
@@ -599,7 +598,7 @@ class Plot(wx.Panel):
             self.image.set_data(psd)
             return self.image
         except queue.Empty:
-            print("Should not happen")
+            wx.LogError("Should not happen")
         return None
 
 class PlotNotebook(wx.Panel):
