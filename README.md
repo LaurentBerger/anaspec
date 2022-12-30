@@ -15,3 +15,9 @@ Press button to start sampling. Signal is plotted in  Oscilloscope window (time 
 Spectrum  is plotted in  Oscilloscope window (Spectral Tab). It can be real time spectrum if button Enable plot spectrum is red (in Interface window spectrum tab). Frequency plotted can be select using slider in Interface window spectrum tab
 
 ![alt text](https://github.com/LaurentBerger/anaspec/blob/master/images/interface_spectrum.jpg)
+
+
+click and press shift key in spectral tab : give frequency and fft modulus
+click and press ctrl key in spectral tab : plot a cross around peak more than -x dB than clicked value 
+click and press alt key in spectral tab : plot bandwidth at level -x dB relative to clicked value 
+All numerical values are printed in window named Oscilloscope Logger
