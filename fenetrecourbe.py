@@ -69,19 +69,22 @@ class CalculSpectrogram(threading.Thread):
     """ calcul du spectrogramme en utilisant un thread
     et envoie d'un événement en fin de calcul
     """
-    def __init__(self, x, fe, win_size_spectro, overlap_spectro):
+    def __init__(self, x, fe, win_size_spectro, overlap_spectro, fenetre='boxcar'):
         threading.Thread.__init__(self)
         self.x = x.copy()
         self.Fe = fe
         self.win_size_spectro = win_size_spectro
         self.overlap_spectro = overlap_spectro
+        self.type_fenetre = fenetre
+        print("CalculSpectrogram ", self.type_fenetre)
     
     def run(self):
         _, _, self.z = signal.spectrogram(
                 self.x,
                 self.Fe,
                 nperseg=self.win_size_spectro,
-                noverlap=self.overlap_spectro)
+                noverlap=self.overlap_spectro,
+                window=tuple(self.type_fenetre))
         evt = EVENT_SPECTRO(attr1="CalculSpectrogram", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
         if PAGE_PLOT_SPECTRO:
@@ -566,7 +569,8 @@ class Plot(wx.Panel):
                     self.flux_audio.plotdata[self.t_beg:self.t_end:, 0],
                     self.flux_audio.Fe,
                     self.flux_audio.win_size_spectro,
-                    self.flux_audio.overlap_spectro
+                    self.flux_audio.overlap_spectro,
+                    self.flux_audio.type_window
                     )
             self.thread_spectrogram.start()
             return self.image

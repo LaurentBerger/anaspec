@@ -208,6 +208,9 @@ class InterfaceAnalyseur(wx.Panel):
         if not self.init_interface:
             self.interface_acquisition()
             self.init_interface = True
+        if self.oscilloscope:
+            self.oscilloscope.page[0].t_beg = self.flux_audio.taille_buffer_signal - self.flux_audio.nb_ech_fenetre
+            self.oscilloscope.page[0].t_end = self.flux_audio.taille_buffer_signal
         if self.choix_freq is not None:
             self.maj_choix_freq()
         wx.LogMessage("Channel : " + str(self.flux_audio.nb_canaux) + " Buffer : " + str(self.flux_audio.taille_buffer_signal))
@@ -398,12 +401,16 @@ class InterfaceAnalyseur(wx.Panel):
                 return
             nb_ech = min(son.shape[0], self.flux_audio.plotdata.shape[0])
             self.oscilloscope.page[0].t_beg = self.flux_audio.plotdata.shape[0] - nb_ech
-            self.oscilloscope.page[0].t_end = self.flux_audio.taille_buffer_signal
+            deb = 0
+            if self.oscilloscope.page[0].t_beg>0:
+                deb = self.oscilloscope.page[0].t_beg // 2
+                self.oscilloscope.page[0].t_beg = self.oscilloscope.page[0].t_beg - deb
+            self.oscilloscope.page[0].t_end = self.flux_audio.taille_buffer_signal - deb
             self.oscilloscope.page[0].maj_limite_slider()
             if len(son.shape) == 1:
-                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] += son[:nb_ech]
+                self.flux_audio.plotdata[self.oscilloscope.page[0].t_beg:self.oscilloscope.page[0].t_end,0] += son[:nb_ech]
             else:
-                self.flux_audio.plotdata[self.flux_audio.plotdata.shape[0] - nb_ech:,0] += son[:nb_ech,0]
+                self.flux_audio.plotdata[self.oscilloscope.page[0].t_beg:self.oscilloscope.page[0].t_end,0] += son[:nb_ech,0]
                 if son.shape[1] != self.flux_audio.plotdata.shape[1]:
                     wx.MessageBox("Channel number are not equal. First channel uses", "Warning", wx.ICON_WARNING)
                 elif son.shape[1] == 2:
@@ -547,7 +554,7 @@ class InterfaceAnalyseur(wx.Panel):
                             font,
                             wx.Centre)
         st_texte.SetSelection(self.type_window.index(
-            self.flux_audio.type_window[0])+1)
+            self.flux_audio.type_window[0]))
         st_texte.Bind(wx.EVT_COMBOBOX,
                       self.change_fenetrage,
                       st_texte,
@@ -1107,8 +1114,9 @@ class InterfaceAnalyseur(wx.Panel):
         Ecoute du signal enregistré
         """
         print("try to play on default output")
-        try:
-            sd.play(self.flux_audio.plotdata, self.flux_audio.Fe, mapping=[1, 2])
+        try:            
+            sd.play(self.flux_audio.plotdata[self.oscilloscope.page[0].t_beg:self.oscilloscope.page[0].t_end, :],
+                    self.flux_audio.Fe, mapping=[1, 2])
         except Exception as e:
             wx.LogError("Cannot play signal :\n",type(e), str(e) )        
 
