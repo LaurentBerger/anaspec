@@ -644,7 +644,8 @@ class PlotNotebook(wx.Panel):
         self.SetSizer(sizer)
         self.parent = parent
         self.clock = time.perf_counter()
-        self.Bind(evt_type, self.draw_pages)
+        self.Bind(evt_type[0], self.draw_pages)
+        self.Bind(evt_type[1], self.new_gen_sig)
         self.clock = 0
 
     def add(self, name="plot", type_courbe='time'):
@@ -672,6 +673,18 @@ class PlotNotebook(wx.Panel):
                 if page.courbe_active:
                     page.draw_page()
                     page.canvas.draw()
+        self.evt_process = True
+
+    def new_gen_sig(self, evt):
+        """ 
+        Nouveau signal généré
+        """
+
+        for page in self.page:
+            page.t_beg = evt.attr1
+            page.t_end = evt.attr2
+            page.maj_limite_slider()
+            page.init_axe()
         self.evt_process = True
 
     def maj_palette(self, page_name, pal_name):

@@ -8,7 +8,7 @@ import scipy.signal
 import wx
 import wx.lib.newevent
 
-NEW_EVENT = None
+NEW_EVENT_GEN = None
 # flux_audio variable global utilisée dans callback  audio_callback
 FLUX_AUDIO = None
 NB_BUFFER = 64
@@ -158,12 +158,13 @@ class FluxAudio(Signal):
     """
     flux audio et ensemble des paramètres associés
     """
-    def __init__(self, n_evt=None, freq=44100, fenetre=2048, canaux=1):
+    def __init__(self, n_evt=(None,None), freq=44100, fenetre=2048, canaux=1):
         super().__init__(freq, fenetre, canaux)
-        global NEW_EVENT
+        global NEW_EVENT_ACQ, NEW_EVENT_GEN
         global FLUX_AUDIO
         FLUX_AUDIO = self
-        NEW_EVENT = n_evt
+        NEW_EVENT_ACQ = n_evt[0]
+        self.NEW_EVENT_GEN = n_evt[1]
         self.file_attente = queue.Queue()
         self.courbe = None
         self.mapping = None
@@ -247,6 +248,27 @@ class FluxAudio(Signal):
     def close(self):
         self.stream.stop()
         self.stream.close()
+
+    def update_signal_genere(self, son):
+        nb_ech = min(son.shape[0], self.plotdata.shape[0])
+        t_beg = self.plotdata.shape[0] - nb_ech
+        deb = 0
+        if t_beg>0:
+            deb = t_beg // 2
+            t_beg = t_beg - deb
+        t_end = self.taille_buffer_signal - deb
+        if len(son.shape) == 1:
+            self.plotdata[t_beg:t_end,0] = son[:nb_ech]
+        else:
+            self.flux_audio.plotdata[t_beg:t_end,0] = son[:nb_ech,0]
+            if son.shape[1] != self.plotdata.shape[1]:
+                wx.MessageBox("Channel number are not equal. First channel uses", "Warning", wx.ICON_WARNING)
+            elif son.shape[1] == 2:
+                self.plotdata[self.plotdata.shape[0]-nb_ech:,1] += son[:nb_ech,1] 
+        evt = self.NEW_EVENT_GEN(attr1=t_beg, attr2=t_end)
+        # Envoi de l'événement à la fenêtre chargée du tracé
+        wx.PostEvent(FLUX_AUDIO.courbe, evt)
+
 
     def new_sample(self):
         """ Réception de nouvelle données
