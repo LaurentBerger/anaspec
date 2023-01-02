@@ -1,5 +1,5 @@
 # anaspec
-Spectrum Analyzer using python (>= 3.10)
+Spectrum Analyzer in python (>= 3.10)
 using wxPython numpy scipy soundfile sounddevice matplolib
 
 To run program click run.py
