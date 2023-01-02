@@ -272,9 +272,10 @@ class InterfaceAnalyseur(wx.Panel):
                                             self.flux_audio,
                                             evt_type=self.id_evt)
         _ = self.oscilloscope.add('Time Signal', type_courbe='time')
-        _ = self.oscilloscope.add('Spectral', type_courbe='dft_modulus')
+        _ = self.oscilloscope.add('Spectrum Module', type_courbe='dft_modulus')
         _ = self.oscilloscope.add('Spectrogram', type_courbe='spectrogram')
         _ = self.oscilloscope.add('Frequency response', type_courbe='Frequency response')
+        _ = self.oscilloscope.add('Spectrum Phase', type_courbe='dft_phase')
         self.flux_audio.courbe = self.oscilloscope
 
         frame.Show()
@@ -542,7 +543,7 @@ class InterfaceAnalyseur(wx.Panel):
                       st_texte,
                       SLIDER_PEAK_DISTANCE)
         self.dico_slider[SLIDER_PEAK_DISTANCE] = (self.flux_audio.set_peak_distance, None)
-
+        # https://dsp.stackexchange.com/questions/36018/dont-window-a-transient-signal
         st_texte = wx.StaticText(page, label="Window")
         self.ajouter_bouton((st_texte, 0), ctrl, ma_grille, font)
         st_texte = wx.ComboBox(page,
