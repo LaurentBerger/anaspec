@@ -54,6 +54,13 @@ class Signal:
         self.freq_response = None
         self.offset_synchro = 1 # décalage entre signal et référence
 
+    def init_data(self, nb_ech=None):
+        if nb_ech is None:
+            self.taille_buffer_signal = int(10 * self.Fe)   
+        else:
+            self.taille_buffer_signal = nb_ech
+        self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
+
     def set_bp_level(self, val=None):
         if val is not None and -10 <= val <=-1:
             self._bp_level = val
@@ -123,6 +130,19 @@ class Signal:
         if recou is not None:
             self.overlap_spectro = recou
         return self.overlap_spectro
+
+    def zero_padding(self, center=False):
+        n = np.log2(self.taille_buffer_signal)
+        prev_size = self.taille_buffer_signal
+        if n == np.ceil(n):
+            n = n + 1
+        temp = self.plotdata.copy()
+        self.init_data(int(2 ** np.ceil(n)))
+        if center:
+            diff_size = self.taille_buffer_signal - prev_size
+            self.plotdata[diff_size // 2 :temp.shape[0] + diff_size // 2,:]= temp
+        else:
+            self.plotdata[0:temp.shape[0],:]= temp
 
     def compute_spectrum(self):
         self.fft = np.fft.fft(self.plotdata)
@@ -194,16 +214,18 @@ class FluxAudio(Signal):
         return format(val, self._format)
 
 
-    def init_data_courbe(self):
-        self.taille_buffer_signal = int(10 * self.Fe)
-        self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
+    def init_data_courbe(self, nb_ech=None):
+        if nb_ech is None:
+            self.taille_buffer_signal = int(10 * self.Fe)   
+        else:
+            self.taille_buffer_signal = nb_ech
+        self.init_data(nb_ech)
         self.mapping = [c-1 for c in range(self.nb_canaux)]
 
     def set_frequency(self, freq_ech=None):
         if freq_ech != None:
             self.Fe = freq_ech
-            self.taille_buffer_signal = int(10 * self.Fe)
-            self.plotdata = np.zeros((self.taille_buffer_signal, self.nb_canaux))
+            self.init_data_courbe()
             if self.f_min > self.Fe/2:
                 self.f_min = self.Fe//2 - 1
             if self.f_max > self.Fe//2:
@@ -232,8 +254,7 @@ class FluxAudio(Signal):
                     self.frequence_dispo.append(str(freq))
             except:
                 pass
-        print(self.frequence_dispo)
-
+        return len(self.frequence_dispo)
 
     def open_stream(self, device_idx):
         self.init_data_courbe()
@@ -312,6 +333,6 @@ def audio_callback(indata, _frames, _time, status):
     if FLUX_AUDIO.courbe.evt_process:
         # Création d'un événement
         FLUX_AUDIO.courbe.evt_process = False
-        evt = NEW_EVENT(attr1="audio_callback", attr2=0)
+        evt = NEW_EVENT_ACQ(attr1="audio_callback", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
         wx.PostEvent(FLUX_AUDIO.courbe, evt)

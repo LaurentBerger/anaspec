@@ -273,6 +273,22 @@ class Plot(wx.Panel):
         if self.slider_t_end is not None:
             self.slider_t_end.SetValue(self.t_end)
 
+    def set_t_beg(self, val):
+        if self.slider_t_beg is not None:
+            self.slider_t_beg.SetValue(val)
+            self.t_beg = val
+
+    def set_t_end(self, val):
+        if self.slider_t_end is not None:
+            self.slider_t_end.SetValue(val)
+            self.t_end = val
+
+    def set_t_max(self, val):
+        if self.slider_t_end is not None:
+            self.slider_t_end.SetMax(val)
+        if self.slider_t_beg is not None:
+            self.slider_t_beg.SetMax(self.t_end - 1)
+
     def change_slider(self, event):
         """
         réglage des glissiéres de temps
@@ -307,7 +323,11 @@ class Plot(wx.Panel):
 
     def UpdateCurseur(self, event):
         if event.inaxes:
-            idx_freq = self.flux_audio.Fe / self.flux_audio.tfd_size
+            try:
+                idx_freq = self.flux_audio.Fe / self.flux_audio.tfd_size
+            except ZeroDivisionError:
+                wx.MessageBox("Division by zero. Try to synchronize index", "Error", wx.ICON_ERROR)
+                return
             x, y = event.xdata, event.ydata
             if event.key == 'shift':
                 match self.type_courbe:
@@ -461,6 +481,8 @@ class Plot(wx.Panel):
         self.val_x = self.val_x * ratio
         phase_selec = self.phase_fft[self.flux_audio.set_k_min():
                                     self.flux_audio.set_k_max():self.pas]
+        if self.val_x.shape[0] != phase_selec.shape[0]:
+            print("oops")
         self.lines = self.graphique.plot(self.val_x, phase_selec)
         self.graphique.axis((self.flux_audio.set_k_min() * ratio,
                              self.flux_audio.set_k_max() * ratio,
@@ -719,6 +741,20 @@ class PlotNotebook(wx.Panel):
                 return page.t_end
         return None        
 
+    def set_t_beg(self, val):
+        for page in self.page:
+            page.set_t_beg(val)
+        return None
+
+    def set_t_end(self, val):
+        for page in self.page:
+            page.set_t_end(val)
+        return None        
+
+    def set_t_max(self, val):
+        for page in self.page:
+            page.set_t_max(val)
+        return None        
 
     def maj_limite_slider(self):
         for page in self.page:
