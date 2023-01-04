@@ -1,6 +1,7 @@
 # anaspec
 Spectrum Analyzer in python (>= 3.10)
 using wxPython numpy scipy soundfile sounddevice matplolib
+![alt text](https://github.com/LaurentBerger/anaspec/blob/master/anaspec.jpg)
 
 To run program click run.py
 You can select a desired device using  "input device" menu
