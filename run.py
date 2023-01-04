@@ -13,6 +13,7 @@ import numpy as np
 import soundfile
 import sounddevice as sd
 import wx
+import wx.adv
 import wx.lib.agw.aui as aui
 import fluxaudio
 import fenetrecourbe as fc
@@ -87,11 +88,57 @@ def disable_quick_edit_mode():
 
 class LogOscillo(wx.LogWindow):
     def __init__(self,pParent, szTitle, show=True, passToOld=True):
-        wx.LogWindow.__init__(self, pParent, szTitle, show, passToOld)
+        wx.LogWindow.__init__(self, pParent,  szTitle, show, passToOld)
+        self.GetFrame().Move(0,280)
     
     def OnFrameClose(self, frame):
         self.Show(False)
         return False
+
+
+#---------------------------------------------------------------------------
+
+class MySplashScreen(wx.adv.SplashScreen):
+    """
+    Create a splash screen widget.
+    https://wiki.wxpython.org/How%20to%20create%20a%20splash%20screen%20%28Phoenix%29
+    """
+    def __init__(self, parent=None):
+
+        #------------
+
+        # This is a recipe to a the screen.
+        # Modify the following variables as necessary.
+        bitmap = wx.Bitmap(name="anaspec.jpg", type=wx.BITMAP_TYPE_JPEG)
+        splash = wx.adv.SPLASH_CENTRE_ON_SCREEN | wx.adv.SPLASH_TIMEOUT
+        duration = 3000 # milliseconds
+
+        # Call the constructor with the above arguments
+        # in exactly the following order.
+        super(MySplashScreen, self).__init__(bitmap=bitmap,
+                                             splashStyle=splash,
+                                             milliseconds=duration,
+                                             parent=None,
+                                             id=-1,
+                                             pos=wx.DefaultPosition,
+                                             size=wx.DefaultSize,
+                                             style=wx.STAY_ON_TOP |
+                                                   wx.BORDER_NONE)
+
+        self.Bind(wx.EVT_CLOSE, self.OnExit)
+
+    #-----------------------------------------------------------------------
+
+    def OnExit(self, event):
+        """
+        ...
+        """
+
+        # The program will freeze without this line.
+        event.Skip()  # Make sure the default handler runs too...
+        self.Hide()
+
+
 
 class InterfaceAnalyseur(wx.Panel):
     """
@@ -292,6 +339,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.note_book.SetSize(self.parent.GetClientSize())
         frame = wx.Frame(None, -1,
                          'Oscilloscope',
+                         pos=(650,0), size=(800,800),
                          style=wx.DEFAULT_FRAME_STYLE &
                          (~wx.CLOSE_BOX) &
                          (~wx.MAXIMIZE_BOX))
@@ -1259,7 +1307,12 @@ class InterfaceAnalyseur(wx.Panel):
 
 if __name__ == '__main__':
     application = wx.App()
-    my_frame = wx.Frame(None, -1, 'Interface',size=(660,330))
+    MySplash = MySplashScreen()
+    MySplash.CenterOnScreen(wx.BOTH)
+    MySplash.Show(True)
+
+
+    my_frame = wx.Frame(None, -1, 'Interface',pos=(0,0), size=(660,280))
     my_plotter = InterfaceAnalyseur(my_frame)
     my_frame.Show()
     
