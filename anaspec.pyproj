@@ -3,7 +3,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>{a249a0b6-a466-4295-a130-5cbe89ba4c12}</ProjectGuid>
+    <ProjectGuid>{a6629f63-aab5-4a4b-bc01-b136562419be}</ProjectGuid>
     <ProjectHome />
     <StartupFile>run.py</StartupFile>
     <SearchPath />
@@ -20,6 +20,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="anaspec.jpg" />
+    <Content Include="anaspec_old.jpg" />
     <Content Include="images\interface.jpg" />
     <Content Include="images\interface_spectrum.jpg" />
     <Content Include="images\time_signal.jpg" />
@@ -37,12 +38,12 @@
   <ItemGroup>
     <Interpreter Include="env\">
       <Id>env</Id>
-      <Version>3.10</Version>
       <Description>env (Python 3.10 (64-bit))</Description>
       <InterpreterPath>Scripts\python.exe</InterpreterPath>
       <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
-      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Version>3.10</Version>
       <Architecture>X64</Architecture>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
     </Interpreter>
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

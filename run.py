@@ -352,7 +352,7 @@ class InterfaceAnalyseur(wx.Panel):
         _ = self.oscilloscope.add('Frequency response', type_courbe='Frequency response')
         _ = self.oscilloscope.add('Spectrum Phase', type_courbe='dft_phase')
         self.flux_audio.courbe = self.oscilloscope
-
+        self.oscilloscope.set_interface(self)
         frame.Show()
 
 
