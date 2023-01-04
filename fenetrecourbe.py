@@ -428,7 +428,7 @@ class Plot(wx.Panel):
         self.val_x = np.arange(self.t_beg,self.t_end)
         self.lines = self.graphique.plot(self.val_x,plotdata[self.t_beg:self.t_end, :])
         self.graphique.axis((self.t_beg, self.t_end , -1, 1))
-        self.graphique.legend(['channel ' + str(c)
+        self.graphique.legend(['channel -> u.a = f(ech)' + str(c)
                                 for c in range(self.flux_audio.nb_canaux)],
                                 loc='lower left',
                                 ncol=self.flux_audio.nb_canaux)
@@ -467,10 +467,10 @@ class Plot(wx.Panel):
             self.lines_ref = self.graphique.plot(self.flux_audio_ref.frequency,
                                                  self.flux_audio_ref.spec_selec * k_norm,
                                                  color='red')
-            self.graphique.legend(['channel 0','Spectrum reference'],
+            self.graphique.legend(['channel 0 -> u.a =f(Hz)','Spectrum reference'],
                                   loc='upper right')
         else:
-            self.graphique.legend(['channel 0'],
+            self.graphique.legend(['channel 0 -> u.a =f(Hz)'],
                                   loc='upper right')
 
     def init_axe_phase(self):
@@ -493,7 +493,7 @@ class Plot(wx.Panel):
         plotdata = self.flux_audio.plotdata[self.t_beg:self.t_end, 0]
         cols = np.arange(0, self.sxx_spectro.shape[1], max(1, self.sxx_spectro.shape[1]//4))
         temps = self.tps_spectro[0:self.tps_spectro.shape[0]:max(1, self.tps_spectro.shape[0]//4)]
-        labels = [f"{x:.2e}" for x in temps]
+        labels = [f"{x:.2e}s" for x in temps]
         self.graphique.set_xticks(cols, minor=False)
         self.graphique.set_xticklabels(labels, fontdict=None, minor=False)
         self.freq_ind_min = np.argmin(abs(self.f_spectro -
@@ -507,9 +507,9 @@ class Plot(wx.Panel):
                             self.freq_ind_max,
                             max(1,
                                 (self.freq_ind_max - self.freq_ind_min) // 4))
-        labels = [f"{x:.0f}" for x in freq]
+        labels = [f"{x:.0f}Hz" for x in freq]
         self.graphique.set_yticks(rows, minor=False)
-        self.graphique.set_yticklabels(labels, fontdict=None, minor=False)
+        self.graphique.set_yticklabels(labels, fontdict=None, minor=False,  rotation='vertical', verticalalignment='center')
         self.sxx_spectro[0, 0] = 1 / self.flux_audio.Fe
         self.image = self.graphique.imshow(self.sxx_spectro[self.freq_ind_min:
                                                             self.freq_ind_max,
