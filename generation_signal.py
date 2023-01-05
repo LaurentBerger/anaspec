@@ -682,7 +682,7 @@ class InterfaceGeneration(wx.Panel):
         if self.flux is None:
             sounddevice.play(self.signal, self.Fe)
         else:
-            if str(self.Fe) in self.flux.frequence_dispo:
+            if str(float(self.Fe)) in self.flux.frequence_dispo:
                 if self.Fe != self.flux.Fe:
                     self.flux.set_frequency(self.Fe)
                     wx.MessageBox("Update Sampling frequency to "+ str(self.flux.Fe) + "Hz", "Warning", wx.ICON_WARNING)
