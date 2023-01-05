@@ -382,7 +382,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_CHIRP)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Chirp duration (ms)")
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         bouton = wx.Button(page, id=BOUTON_SAVE_CHIRP)
@@ -410,7 +410,8 @@ class InterfaceGeneration(wx.Panel):
         self.t_ech = np.arange(-self._duree_gaussian/2000,self._duree_gaussian/2000,1/self.Fe)
 
     def signal_gaussian(self):
-        self.signal = scipy.signal.gausspulse(self.t_ech, fc=self.f0_gaussian(), bw=self._ratio_gaussian/1000)
+        self.signal = scipy.signal.gausspulse(self.t_ech, fc=self.f0_gaussian(),
+                                              bw=(self._ratio_gaussian/1000*self.Fe)/self.f0_gaussian())
         self.signal *= self.amplitude
         return True
 
@@ -488,7 +489,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_GAUSSIAN)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Square wave duration (ms)")
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
@@ -505,7 +506,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Duty cycle (‰)")
+        st_texte = wx.StaticText(page, label="Band width (nomalised frequency)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
 
@@ -621,7 +622,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_SINUS)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Sinusoide duration (ms)")
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
         case = wx.CheckBox(page, -1, 'Add 1000Hz frequency reference')
         case.SetValue(self.sinus_reference)
@@ -749,7 +750,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_SQUARE)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Square wave duration (ms)")
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
@@ -960,7 +961,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_DUREE_RAMP)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Chirp duration (ms)")
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         bouton = wx.Button(page, id=BOUTON_SAVE_RAMP)

@@ -20,7 +20,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="anaspec.jpg" />
-    <Content Include="anaspec_old.jpg" />
     <Content Include="images\interface.jpg" />
     <Content Include="images\interface_spectrum.jpg" />
     <Content Include="images\time_signal.jpg" />
