@@ -497,7 +497,7 @@ class InterfaceGeneration(wx.Panel):
                            id=SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN,
                            value=self.ratio_square(),
                            minValue=0,
-                           maxValue=1000,
+                           maxValue=500,
                            style=style_texte,
                            name="Duration")
         self.dico_slider[SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN] = self.ratio_gaussian
@@ -506,7 +506,7 @@ class InterfaceGeneration(wx.Panel):
                     gadget,
                     SLIDER_RAPPORT_CYCLIQUE_GAUSSIAN)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
-        st_texte = wx.StaticText(page, label="Band width (nomalised frequency)")
+        st_texte = wx.StaticText(page, label="Band width (‰ normalised frequency)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
 

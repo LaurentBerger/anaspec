@@ -178,10 +178,12 @@ class InterfaceAnalyseur(wx.Panel):
         self.new_event_gen, self.id_evt_gen = wx.lib.newevent.NewEvent() # lorsqu'un signal est généré
         self.parent = parent
         self.init_interface = False
+        self.menu_periph_in =  None
+        self.menu_periph_out =  None
         self.idmenu_audio_in = {-1: -1}
         self.idmenu_audio_out = {-1: -1}
-        self.idx_periph_in = None
-        self.idx_periph_out = None
+        self.idx_periph_in = -1
+        self.idx_periph_out = -1
         self.dico_slider = None
         self.dico_label = None
         self.ctrl = None
@@ -306,17 +308,22 @@ class InterfaceAnalyseur(wx.Panel):
         """
         fonction appelée lorsqu'un périphérique
         est sélectionné dans le menu audio_out :
-        activation de l'interface d'acquisition et
-        ajout d'une marque sur l'article sélectionné
+        activation ou désactivation de la sortie d'acquisition et
+        ajout ou retrait d'une marque sur l'article sélectionné
         """
         obj = event.GetEventObject()
-        self.disable_item_check(2)
         id_fenetre = event.GetId()
-        obj.Check(id_fenetre, True)
         nom_periph_out = obj.GetLabel(id_fenetre)
-        if nom_periph_out in self.idmenu_audio_out:
-            self.idx_periph_out = self.idmenu_audio_out[nom_periph_out]
-            sd.default.device[1] = self.idx_periph_out
+        if self.idx_periph_out == self.idmenu_audio_out[nom_periph_out]:
+            self.disable_item_check(2)
+            self.idx_periph_out = -1
+            self.flux_audio.stream_out = None
+            return
+        self.disable_item_check(2)
+        obj.Check(id_fenetre, True)
+        self.idx_periph_out = self.idmenu_audio_out[nom_periph_out]
+        sd.default.device[1] = self.idx_periph_out
+        
 
     def interface_acquisition(self):
         """
@@ -386,10 +393,10 @@ class InterfaceAnalyseur(wx.Panel):
                                 for idx, x in enumerate(self.idmenu_audio_in)]
         barre_menu.Append(self.menu_periph_in, 'input device')
 
-        menu_periph_out = wx.Menu()
-        _ = [menu_periph_out.AppendCheckItem(idx+300, x)
-             for idx, x in enumerate(self.idmenu_audio_out)]
-        barre_menu.Append(menu_periph_out, 'output device')
+        self.menu_periph_out = wx.Menu()
+        self.liste_periph_out = [self.menu_periph_out.AppendCheckItem(idx+300, x)
+                                 for idx, x in enumerate(self.idmenu_audio_out)]
+        barre_menu.Append(self.menu_periph_out, 'output device')
         menu_about = wx.Menu()
         _ = menu_about.Append(ID_ZEROPADDING, 'Zero padding', 'Zero padding')
         _ = menu_about.Append(ID_ZEROPADDING_CENTER, 'Zero padding center', 'Zero padding center')
@@ -400,6 +407,7 @@ class InterfaceAnalyseur(wx.Panel):
         _ = menu_about.Append(wx.ID_ABOUT, 'About', 'About anaspec')
         barre_menu.Append(menu_about, '&Help')
         self.parent.SetMenuBar(barre_menu)
+        self.disable_item_check(2)
         self.parent.Bind(wx.EVT_CLOSE, self.close_page)
         self.parent.Bind(wx.EVT_MENU, self.about, id=wx.ID_ABOUT)
         self.parent.Bind(wx.EVT_MENU, self.generation_sig, id=ID_SIGGEN)
@@ -1266,12 +1274,14 @@ class InterfaceAnalyseur(wx.Panel):
             self.set_window_size()
             # self.set_time_length()
             self.oscilloscope.draw_all_axis()
-            if not self.flux_audio.open_stream(self.idx_periph_in):
+            if not self.flux_audio.open_stream_in(self.idx_periph_in):
                 self.disable_item_check()
                 wx.MessageBox("Cannot opened input device : input disable",
                               "Error",
                               wx.ICON_WARNING)
                 return
+            if self.idx_periph_out != -1:
+                self.flux_audio.open_stream_out(self.idx_periph_out)
             self.update_spectro_interface()
             self.update_tfd_interface()
             for page in self.oscilloscope.page:

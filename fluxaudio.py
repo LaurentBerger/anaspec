@@ -184,8 +184,11 @@ class FluxAudio(Signal):
         global FLUX_AUDIO
         FLUX_AUDIO = self
         NEW_EVENT_ACQ = n_evt[0]
+        self.stream_in = None
+        self.stream_out = None
         self.NEW_EVENT_GEN = n_evt[1]
         self.file_attente = queue.Queue()
+        self.file_attente_out = queue.Queue()
         self.courbe = None
         self.mapping = None
         self.nb_data = 0
@@ -193,7 +196,6 @@ class FluxAudio(Signal):
         self.nb_canaux = canaux
         self.Fe = freq
         self.courbe = None
-        self.stream = None
         self.duration = -1
         self.tps_refresh = 0.1
         self.frequence_dispo =  [] # frequence possible sur le périphérique
@@ -245,30 +247,47 @@ class FluxAudio(Signal):
         self.nb_canaux = self.max_canaux
         for freq in frequence_num:
             try:
-                self.stream = sd.InputStream(
+                self.stream_in = sd.InputStream(
                     device=device_idx, channels=self.nb_canaux,
                     samplerate=freq, callback=audio_callback)
-                self.stream.start()
-                self.stream.close()
+                self.stream_in.start()
+                self.stream_in.close()
                 if str(freq) not in self.frequence_dispo:
                     self.frequence_dispo.append(str(freq))
             except:
                 pass
         return len(self.frequence_dispo)
 
-    def open_stream(self, device_idx):
+    def open_stream_in(self, device_idx):
         self.init_data_courbe()
         self.file_attente = queue.Queue()
-        self.stream = sd.InputStream(
-            device=device_idx, channels=self.nb_canaux,
-            samplerate=self.Fe, callback=audio_callback)
+        self.stream_in = sd.InputStream(
+               device=device_idx, channels=self.nb_canaux,
+               samplerate=self.Fe, callback=audio_callback)
         self.nb_data = 0
-        self.stream.start()
+        self.stream_in.start()
+        return True
+
+    def open_stream_out(self, device_idx):
+        self.file_attente_out = queue.Queue()
+        self.file_attente_out.put(np.zeros(shape=(5000,1),dtype=np.float64))
+        self.file_attente_out.put(np.zeros(shape=(5000,1),dtype=np.float64))
+        self.file_attente_out.put(np.zeros(shape=(5000,1),dtype=np.float64))
+        self.stream_out = sd.OutputStream(
+                    samplerate=self.Fe-1,
+                    device=device_idx, channels=1,
+                    callback=audio_callback_out)
+        self.nb_data_out = 0
+        self.stream_out.start()
         return True
 
     def close(self):
-        self.stream.stop()
-        self.stream.close()
+        self.stream_in.stop()
+        self.stream_in.close()
+        if self.stream_out is not None:
+            self.stream_out.stop()
+            self.stream_out.close()
+
 
     def update_signal_genere(self, son):
         nb_ech = son.shape[0]
@@ -310,9 +329,30 @@ class FluxAudio(Signal):
                 raise ValueError("Should not happen")
         return self.nb_data
 
+def audio_callback_out(outdata, frames, time, status):
+    # assert frames == args.blocksize
+    print("shape =", outdata.shape)
+    if status.output_underflow:
+        print('Output underflow: increase blocksize?')
+        raise sd.CallbackAbort
+    assert not status
+    try:
+        data = FLUX_AUDIO.file_attente_out.get_nowait()
+        print("datashape =", data.shape)
+    except queue.Empty as e:
+        print('Buffer is empty: increase buffersize?')
+        outdata[:,0].fill(0)
+        return
+        # raise sd.CallbackAbort from e
+    if data.shape[0] < outdata.shape[0]:
+        outdata[:len(data),0] = data
+        outdata[len(data):,0].fill(0)
+        raise sd.CallbackStop
+    else:
+        outdata[:,0] = data[:outdata.shape[0],0]
 
 def audio_callback(indata, _frames, _time, status):
-    """Fonction appelée lorsque des données audio sont disponibles."""
+    """Fonction appelée lorsque des données audio in sont disponibles."""
     if status:
         print(status, file=sys.stderr)
     # Copie des données dans la file:
@@ -324,9 +364,12 @@ def audio_callback(indata, _frames, _time, status):
         FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
     else:
         FLUX_AUDIO.file_attente.put(indata[:,FLUX_AUDIO.mapping])
+        print(indata[:,FLUX_AUDIO.mapping].shape)
     # FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
     if FLUX_AUDIO.courbe.evt_process:
         # Création d'un événement
+        if FLUX_AUDIO.stream_out is not None:
+            FLUX_AUDIO.file_attente_out.put(indata[:,FLUX_AUDIO.mapping])
         FLUX_AUDIO.courbe.evt_process = False
         evt = NEW_EVENT_ACQ(attr1="audio_callback", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
