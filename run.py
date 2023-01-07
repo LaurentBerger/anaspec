@@ -258,12 +258,10 @@ class InterfaceAnalyseur(wx.Panel):
             self.menu_periph_in.Check(idx_best+200, True)
         else:
             name_best = nom_periph_in
-        self.idx_periph_in = self.idmenu_audio_in[name_best]
-        self.idx_periph_in = self.idmenu_audio_in[nom_periph_in]
-        self.flux_audio.nb_canaux = self.liste_periph[self.idx_periph_in]["max_input_channels"]
-        self.flux_audio.set_frequency(self.liste_periph[self.idx_periph_in]["default_samplerate"])
+        self.idx_periph_in = idx_best
         self.flux_audio.capacite_periph_in(self.liste_periph, self.idx_periph_in)
-        self.flux_audio.init_data_courbe()
+        self.flux_audio.nb_canaux = 1 # forcer à 1 pour audiocallback_inself.liste_periph[self.idx_periph_in]["max_input_channels"]
+        self.flux_audio.set_frequency(self.liste_periph[self.idx_periph_in]["default_samplerate"])
         if not self.init_interface:
             self.interface_acquisition()
             self.init_interface = True
@@ -1253,7 +1251,7 @@ class InterfaceAnalyseur(wx.Panel):
             sd.play(self.flux_audio.plotdata[self.oscilloscope.page[0].t_beg:self.oscilloscope.page[0].t_end, :],
                     self.flux_audio.Fe, mapping=[1, 2])
         except Exception as e:
-            wx.LogError("Cannot play signal :\n",type(e), str(e) )        
+            wx.LogError("Cannot play signal :\n" + str(e) )        
 
 
     def on_start_stop(self, event):

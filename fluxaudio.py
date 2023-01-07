@@ -1,3 +1,4 @@
+from ast import Try
 from pickle import NONE
 import queue
 import sys
@@ -193,7 +194,6 @@ class FluxAudio(Signal):
         self.mapping = None
         self.nb_data = 0
         self.simulate =  False
-        self.nb_canaux = canaux
         self.Fe = freq
         self.courbe = None
         self.duration = -1
@@ -201,6 +201,8 @@ class FluxAudio(Signal):
         self.frequence_dispo =  [] # frequence possible sur le périphérique
         self.max_canaux =  0 # nombre maximum de canaux disponiobles pour la numérisation
         self.simulate =  False
+        self._decimale =  1
+        self._mantisse = 1
 
     def get_device(self):
         return sd.query_devices()
@@ -245,6 +247,8 @@ class FluxAudio(Signal):
         self.frequence_dispo.append(str(liste_periph[device_idx]['default_samplerate']))
         self.max_canaux = liste_periph[device_idx]['max_input_channels']
         self.nb_canaux = self.max_canaux
+        # forcer un seul canal
+        self.nb_canaux = 1
         for freq in frequence_num:
             try:
                 self.stream_in = sd.InputStream(
@@ -273,13 +277,17 @@ class FluxAudio(Signal):
         self.file_attente_out.put(np.zeros(shape=(5000,1),dtype=np.float64))
         self.file_attente_out.put(np.zeros(shape=(5000,1),dtype=np.float64))
         self.file_attente_out.put(np.zeros(shape=(5000,1),dtype=np.float64))
-        self.stream_out = sd.OutputStream(
-                    samplerate=self.Fe-1,
+        try:
+            self.stream_out = sd.OutputStream(
+                    samplerate=self.Fe,
                     device=device_idx, channels=1,
                     callback=audio_callback_out)
-        self.nb_data_out = 0
-        self.stream_out.start()
-        return True
+            self.nb_data_out = 0
+            self.stream_out.start()
+            return True
+        except:
+           self.stream_out = None
+        return False
 
     def close(self):
         self.stream_in.stop()
@@ -287,6 +295,7 @@ class FluxAudio(Signal):
         if self.stream_out is not None:
             self.stream_out.stop()
             self.stream_out.close()
+            self.stream_out =  None
 
 
     def update_signal_genere(self, son):
@@ -331,23 +340,21 @@ class FluxAudio(Signal):
 
 def audio_callback_out(outdata, frames, time, status):
     # assert frames == args.blocksize
-    print("shape =", outdata.shape)
     if status.output_underflow:
         print('Output underflow: increase blocksize?')
-        raise sd.CallbackAbort
+        outdata.fill(0)
     assert not status
     try:
-        data = FLUX_AUDIO.file_attente_out.get_nowait()
-        print("datashape =", data.shape)
+        data = FLUX_AUDIO.file_attente_out.get()
     except queue.Empty as e:
         print('Buffer is empty: increase buffersize?')
         outdata[:,0].fill(0)
         return
         # raise sd.CallbackAbort from e
     if data.shape[0] < outdata.shape[0]:
-        outdata[:len(data),0] = data
-        outdata[len(data):,0].fill(0)
-        raise sd.CallbackStop
+        outdata[:len(data)] = data
+        outdata[len(data):].fill(0)
+        return
     else:
         outdata[:,0] = data[:outdata.shape[0],0]
 
@@ -364,12 +371,11 @@ def audio_callback(indata, _frames, _time, status):
         FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
     else:
         FLUX_AUDIO.file_attente.put(indata[:,FLUX_AUDIO.mapping])
-        print(indata[:,FLUX_AUDIO.mapping].shape)
-    # FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
+        if FLUX_AUDIO.stream_out is not None:
+            FLUX_AUDIO.file_attente_out.put(3*indata[:,FLUX_AUDIO.mapping])
+     # FLUX_AUDIO.file_attente.put(x[:,FLUX_AUDIO.mapping])
     if FLUX_AUDIO.courbe.evt_process:
         # Création d'un événement
-        if FLUX_AUDIO.stream_out is not None:
-            FLUX_AUDIO.file_attente_out.put(indata[:,FLUX_AUDIO.mapping])
         FLUX_AUDIO.courbe.evt_process = False
         evt = NEW_EVENT_ACQ(attr1="audio_callback", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
