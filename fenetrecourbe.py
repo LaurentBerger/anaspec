@@ -236,6 +236,7 @@ class Plot(wx.Panel):
         presentation_fenetre.Add(presentation_status)
         # self.canvas.mpl_connect('motion_notify_event', self.UpdateCurseur)
         self.canvas.mpl_connect('button_press_event', self.UpdateCurseur)
+        self.canvas.mpl_connect('key_press_event', self.on_key)
         self.SetSizer(presentation_fenetre)
         self.tps = 0
         self.thread_fft =  None
@@ -346,6 +347,19 @@ class Plot(wx.Panel):
         n_max = min(idx + 1000, idx_max)
         idx = np.argmin(np.abs(y - self.mod_fft[n_min + offset : n_max + offset]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
         return idx + offset
+
+    def on_key(self, event):
+        if event.key == 'delete':
+            if self.bp_line:
+                self.bp_line.remove()
+                self.bp_text.remove()
+                self.bp_arrw.remove()
+                self.bp_line = None
+            if self.peak_mark is not None:
+                for line in self.peak_mark:
+                    line.remove()
+                    self.peak_mark = None
+            self.canvas.draw()
 
 
     def UpdateCurseur(self, event):
