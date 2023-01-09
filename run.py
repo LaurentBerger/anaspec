@@ -257,6 +257,7 @@ class InterfaceAnalyseur(wx.Panel):
                     idx_best = idx
             self.menu_periph_in.Check(idx_best+200, True)
         else:
+            idx_best = self.idmenu_audio_in[nom_periph_in]
             name_best = nom_periph_in
         self.idx_periph_in = idx_best
         self.flux_audio.capacite_periph_in(self.liste_periph, self.idx_periph_in)
