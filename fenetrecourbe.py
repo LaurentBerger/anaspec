@@ -379,6 +379,7 @@ class Plot(wx.Panel):
                             texte = [format(v,".3e") for v in a ]
                             self.info_curseur.SetLabel("Ech= " + str(idx) + " y=" + '/'.join(texte))
                             wx.LogMessage("Ech= " + str(idx) + " y=" + '/'.join(texte))
+                            wx.LogMessage(40*'*')
                     case 'dft_modulus':
                          if self.flux_audio.plotdata is not None and self.mod_fft is not None:
                             idx = self.localise_freq(x, y)
@@ -411,6 +412,7 @@ class Plot(wx.Panel):
                 wx.LogMessage('Mean [bp]  ' + format(mean_bp, '.4e') + "Hz")
                 wx.LogMessage('Std [bp]  ' + format(std_bp, '.4e') + "Hz")
                 wx.LogMessage('Std/mean [bp]  ' + format(std_bp/mean_bp, '.4e') + "Hz")
+                wx.LogMessage(40*'*')
                 if self.bp_line:
                     self.bp_line.remove()
                     self.bp_text.remove()
@@ -454,7 +456,7 @@ class Plot(wx.Panel):
                                 line.remove()
                         self.peak_mark = self.graphique.plot(pos_peak[pos] * idx_freq, self.mod_fft[pos_peak[pos]], "x")
                         self.canvas.draw()
-
+                    wx.LogMessage(40*'*')
 
     def init_axe_time(self):
         plotdata = self.flux_audio.plotdata
