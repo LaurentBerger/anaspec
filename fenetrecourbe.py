@@ -407,11 +407,12 @@ class Plot(wx.Panel):
                 wx.LogMessage('Width at height ' + format(self.mod_fft[idx] * bp_level, '.4e'))
                 texte = 'BP = '+ self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq) + 'Hz'
                 wx.LogMessage(texte)
-                wx.LogMessage('Limits = ' + str(idx_inf * idx_freq) + 'Hz <-> ' +  str(idx_sup * idx_freq) + 'Hz')
+                wx.LogMessage("\tLow freq(Hz)\t High freq(Hz)\tMean(u.a.)\tstd(u.a.)\tstd/mean ")
+                texte = "\t" + str(idx_inf * idx_freq) + '\t' +  str(idx_sup * idx_freq) + '\t'
+                texte = texte + format(mean_bp, '.4e') + '\t' + format(std_bp, '.4e') + "\t"
+                texte = texte + format(std_bp/mean_bp, '.4e') 
+                wx.LogMessage(texte)
                 wx.LogMessage('Uncertainty  ' + format(2 * self.flux_audio.Fe/self.flux_audio.tfd_size, '.4e') + "Hz")
-                wx.LogMessage('Mean [bp]  ' + format(mean_bp, '.4e') + "Hz")
-                wx.LogMessage('Std [bp]  ' + format(std_bp, '.4e') + "Hz")
-                wx.LogMessage('Std/mean [bp]  ' + format(std_bp/mean_bp, '.4e') + "Hz")
                 wx.LogMessage(40*'*')
                 if self.bp_line:
                     self.bp_line.remove()
@@ -439,16 +440,18 @@ class Plot(wx.Panel):
                                                     height= self.mod_fft[idx] * bp_level,
                                                     distance=self.flux_audio.set_peak_distance())
                     nb_peak = 0
-                    for p in pos_peak:                   
-                        if p > 0 and p < self.flux_audio.tfd_size // 2:
-                            texte = 'F ' + str(self.flux_audio.get_format_precision(p * idx_freq)) + "Hz" +\
-                                    'M ' + format(self.mod_fft[p], '.4e') + " u.a."
-                            wx.LogMessage(texte)
-                            nb_peak = nb_peak + 1
-                            if nb_peak>=100:
-                                wx.LogMessage("Number of peaks is greater than 100")
-                                wx.LogMessage("Stop iterating")
-                                break
+                    if len(pos_peak) != 0:
+                        wx.LogMessage("\tFrequency(Hz)\tAmplitude(u.a.)" )
+                        for p in pos_peak:                   
+                            if p > 0 and p < self.flux_audio.tfd_size // 2:
+                                texte = "\t" + str(self.flux_audio.get_format_precision(p * idx_freq)) + "\t" +\
+                                        format(self.mod_fft[p], '.4e')
+                                wx.LogMessage(texte)
+                                nb_peak = nb_peak + 1
+                                if nb_peak>=100:
+                                    wx.LogMessage("Number of peaks is greater than 100")
+                                    wx.LogMessage("Stop iterating")
+                                    break
                     if nb_peak <= 100:
                         pos = np.logical_and(pos_peak > 0, pos_peak < self.flux_audio.tfd_size // 2)
                         if self.peak_mark is not None:
