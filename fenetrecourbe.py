@@ -401,14 +401,13 @@ class Plot(wx.Panel):
                     self.canvas.draw()
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
-                wx.LogMessage('Selected frequency ' + str(self.flux_audio.get_format_precision(idx  * idx_freq)) + "Hz")
-                wx.LogMessage('Module ' + format(self.mod_fft[idx], '.4e') +" u.a.")
                 bp_level, idx_inf, idx_sup, mean_bp, std_bp = self.computeBP(idx)
-                wx.LogMessage('Width at height ' + format(self.mod_fft[idx] * bp_level, '.4e'))
-                texte = 'BP = '+ self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq) + 'Hz'
-                wx.LogMessage(texte)
-                wx.LogMessage("\tLow freq(Hz)\t High freq(Hz)\tMean(u.a.)\tstd(u.a.)\tstd/mean ")
-                texte = "\t" + str(idx_inf * idx_freq) + '\t' +  str(idx_sup * idx_freq) + '\t'
+                wx.LogMessage("\tSelected frequency(hz)\tModule( arb. unit)\tWidth at height( arb. unit)\tB(Hz)\tLow freq(Hz)\t High freq(Hz)\tMean( arb. unit)\tstd( arb. unit)\tstd/mean ")
+                texte = "\t" + str(self.flux_audio.get_format_precision(idx  * idx_freq))
+                texte = texte + "\t" + format(self.mod_fft[idx], '.4e')
+                texte = texte + "\t" + format(self.mod_fft[idx] * bp_level, '.4e')
+                texte = texte + "\t" + self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq)
+                texte = texte + "\t" + str(idx_inf * idx_freq) + '\t' +  str(idx_sup * idx_freq) + '\t'
                 texte = texte + format(mean_bp, '.4e') + '\t' + format(std_bp, '.4e') + "\t"
                 texte = texte + format(std_bp/mean_bp, '.4e') 
                 wx.LogMessage(texte)
@@ -426,9 +425,6 @@ class Plot(wx.Panel):
                 self.bp_line = self.graphique.hlines(self.mod_fft[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
                                                      colors='k')
                 self.bp_text = self.graphique.text((idx_sup  + idx_inf) * idx_freq / 2,self.mod_fft[idx]* bp_level,  texte)
-                #ratio = (idx_sup - idx_inf) * idx_freq * 0.05
-                #self.bp_line = self.graphique.arrow(self.mod_fft[idx]/2, idx_inf * idx_freq - ratio, ratio, ratio)
-                #self.bp_line = self.graphique.arrow(self.mod_fft[idx]/2, idx_sup * idx_freq , ratio, ratio)
 
                 self.canvas.draw()
             if event.key == 'control' and self.type_courbe == 'dft_modulus':

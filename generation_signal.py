@@ -33,10 +33,11 @@ CASE_REFERENCE = 15006
 BOUTON_SAVE_RAMP = 18001
 BOUTON_PLAY_RAMP = 18002
 SLIDER_F0_RAMPE_FONCTION = 18003
-SLIDER_F0_RAMP = 18003
-SLIDER_F1_RAMP = 18004
-SLIDER_NB_RAMP = 18005
-SLIDER_DUREE_RAMP = 18006
+SLIDER_F0_RAMP = 18004
+SLIDER_F1_RAMP = 18005
+SLIDER_NB_RAMP = 18006
+SLIDER_DUREE_RAMP = 18007
+CASE_REFERENCE_RAMP = 18008
 
 BOUTON_SAVE_SQUARE = 16001
 BOUTON_PLAY_SQUARE = 16002
@@ -92,6 +93,7 @@ class InterfaceGeneration(wx.Panel):
         self._ratio_square = 50
         self._ratio_gaussian = 50
         self.sinus_reference =  True
+        self.ramp_reference =  True
         self.Fe = 22050
         self.t_ech = None
         self.dico_slider = {0: None}
@@ -822,7 +824,7 @@ class InterfaceGeneration(wx.Panel):
             t = self.t_ech[0: width]
             if self.fct_ramp == 'gausspulse':
                 t = t - t[-1]/2
-
+            df = (self._f1_ramp - self._f0_ramp) / self._nb_ramp
             # self.t_ech = np.arange(-self._duree_gaussian/2000,self._duree_gaussian/2000,1/self.Fe)
             for idx in range(self._nb_ramp):
                 match self.fct_ramp:
@@ -832,12 +834,16 @@ class InterfaceGeneration(wx.Panel):
                         self.signal[t_beg: t_end] = scipy.signal.square(t * 2 * np.pi * f, self._ratio_square/100)
                     case 'gausspulse':
                         self.signal[t_beg: t_end] = scipy.signal.gausspulse(t, fc=f, bw=self._ratio_gaussian/1000)
+                    case 'chirp':
+                        self.signal[t_beg: t_end] = scipy.signal.chirp(t, f + df * 0.9, t[-1], f, method=self.methode)
                     case _:
                         raise ValueError("Unknown ramp function ")
                 self.signal[t_beg: t_end] *= self.amplitude
                 t_beg = t_end
                 t_end = t_end + width
-                f = (idx + 1) * (self._f1_ramp - self._f0_ramp) / self._nb_ramp + self._f0_ramp
+                f = (idx + 1) * df + self._f0_ramp
+            if self.ramp_reference is True:
+                self.signal[:] += np.sin(2 * np.pi * 1000 *self.t_ech) * self.amplitude / self._nb_ramp
             if self.flux is not None:
                 self.flux.update_signal_genere(self.signal)
             return True
@@ -872,6 +878,13 @@ class InterfaceGeneration(wx.Panel):
         else:
             wx.LogError(self.err_msg)
 
+    def maj_ramp_reference(self, evt):
+        case = evt.GetEventObject()
+        if case.GetValue():
+            self.ramp_reference = True
+        else:
+            self.ramp_reference = False
+
     def ajouter_page_rampe(self, name="Ramp"):
         """
         création de l'onglet Rampe
@@ -883,8 +896,8 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=7, cols=2, vgap=20, hgap=20)
-        type_fct = ['sin', 'square', 'gausspulse']
+        ma_grille = wx.GridSizer(rows=8, cols=2, vgap=20, hgap=20)
+        type_fct = ['sin', 'square', 'gausspulse', 'chirp']
         self.choix_Fe_ramp = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_ramp.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_ramp, 1), ctrl, ma_grille, font)
@@ -950,7 +963,7 @@ class InterfaceGeneration(wx.Panel):
         style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
         gadget = wx.Slider(page,
                              id=SLIDER_DUREE_RAMP,
-                             value=self.duree_chirp(),
+                             value=self.duree_ramp(),
                              minValue=0,
                              maxValue=10000,
                              style=style_texte,
@@ -962,6 +975,15 @@ class InterfaceGeneration(wx.Panel):
                     SLIDER_DUREE_RAMP)
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
         st_texte = wx.StaticText(page, label="Sampling duration (ms)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        case = wx.CheckBox(page, -1, 'Add 1000Hz frequency reference')
+        case.SetValue(self.ramp_reference)
+        case.Bind(wx.EVT_CHECKBOX,
+                    self.maj_ramp_reference,
+                    case,
+                    CASE_REFERENCE_RAMP)
+        self.ajouter_gadget((case, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
 
         bouton = wx.Button(page, id=BOUTON_SAVE_RAMP)

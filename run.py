@@ -428,7 +428,7 @@ class InterfaceAnalyseur(wx.Panel):
                wx.MessageBox("First choose peripherical in input device menu", "Error", wx.ICON_ERROR)
                return
         if self.frame_gen_sig is None:
-            self.frame_gen_sig = wx.Frame(None, -1, 'Signal generators', size=(770,360))
+            self.frame_gen_sig = wx.Frame(None, -1, 'Signal generators', size=(770,400))
             gen_sig = generation_signal.InterfaceGeneration(self.frame_gen_sig, fa=self.flux_audio)
             gen_sig.interface_generation_fct()
             self.frame_gen_sig.Bind(wx.EVT_CLOSE, self.hide_gen_sig)
