@@ -18,6 +18,7 @@ import wx.lib.agw.aui as aui
 import audio.fluxaudio as fluxaudio
 import audio.fenetrecourbe as fc
 import audio.generation_signal as generation_signal
+import audio.grid_frequency
 
 
 MIN_TFD_SIZE = 256
@@ -195,7 +196,8 @@ class InterfaceAnalyseur(wx.Panel):
         self.flux_audio_ref = None
         self.oscilloscope = None
         self.frame_gen_sig = None
-        self.log = LogOscillo(self, "Oscilloscope Logger", show=True, passToOld=False)
+        self.log = LogOscillo(self, "Oscilloscope Logger", show=False, passToOld=False)
+        self.sheet =  audio.grid_frequency.GridFrequency(self)
 
         self.install_menu()
         self.parent.Show()

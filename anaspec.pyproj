@@ -20,18 +20,25 @@
   </PropertyGroup>
   <ItemGroup>
     <Content Include="anaspec.jpg" />
+    <Content Include="audio\__pycache__\fenetrecourbe.cpython-310.pyc" />
+    <Content Include="audio\__pycache__\fluxaudio.cpython-310.pyc" />
+    <Content Include="audio\__pycache__\generation_signal.cpython-310.pyc" />
+    <Content Include="audio\__pycache__\grid_frequency.cpython-310.pyc" />
     <Content Include="images\interface.jpg" />
     <Content Include="images\interface_spectrum.jpg" />
     <Content Include="images\time_signal.jpg" />
     <Content Include="requirements.txt" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="fenetrecourbe.py" />
-    <Compile Include="fluxaudio.py" />
-    <Compile Include="generation_signal.py" />
+    <Compile Include="audio\fenetrecourbe.py" />
+    <Compile Include="audio\fluxaudio.py" />
+    <Compile Include="audio\generation_signal.py" />
+    <Compile Include="audio\grid_frequency.py" />
     <Compile Include="run.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="audio\" />
+    <Folder Include="audio\__pycache__\" />
     <Folder Include="images" />
   </ItemGroup>
   <ItemGroup>

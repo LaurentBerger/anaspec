@@ -106,6 +106,7 @@ class Plot(wx.Panel):
         self.id_bouton_normaliser =  None
         self.id_bouton_compute =  None
         self.palette = None
+        self.interface = None
         match type_courbe:
             case 'time':
                 self.id_slider_beg = SLIDER_T_BEG
@@ -253,6 +254,11 @@ class Plot(wx.Panel):
             self.slider_t_beg.SetValue(self.t_beg)
         self.maj_limite_slider()
         self.init_axe()
+
+    def set_interface(self, interface=None):
+        if interface is not None:
+            self._interface = interface
+        return self._interface
 
     def normaliser(self, _evt):
         self.init_axe()
@@ -402,14 +408,17 @@ class Plot(wx.Panel):
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
                 bp_level, idx_inf, idx_sup, mean_bp, std_bp = self.computeBP(idx)
-                wx.LogMessage("\tSelected frequency(hz)\tModule( arb. unit)\tWidth at height( arb. unit)\tB(Hz)\tLow freq(Hz)\t High freq(Hz)\tMean( arb. unit)\tstd( arb. unit)\tstd/mean ")
-                texte = "\t" + str(self.flux_audio.get_format_precision(idx  * idx_freq))
+                texte = "Selected frequency(hz)\tModule( arb. unit)\tWidth at height( arb. unit)\tB(Hz)\tLow freq(Hz)\t High freq(Hz)\tMean( arb. unit)\tstd( arb. unit)\tstd/mean "
+                wx.LogMessage(texte)
+                texte = texte + "\n" + str(self.flux_audio.get_format_precision(idx  * idx_freq))
                 texte = texte + "\t" + format(self.mod_fft[idx], '.4e')
                 texte = texte + "\t" + format(self.mod_fft[idx] * bp_level, '.4e')
                 texte = texte + "\t" + self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq)
                 texte = texte + "\t" + str(idx_inf * idx_freq) + '\t' +  str(idx_sup * idx_freq) + '\t'
-                texte = texte + format(mean_bp, '.4e') + '\t' + format(std_bp, '.4e') + "\t"
-                texte = texte + format(std_bp/mean_bp, '.4e') 
+                texte = texte + "\t" + format(mean_bp, '.4e') + '\t' + format(std_bp, '.4e') + "\t"
+                texte = texte + "\t" + format(std_bp/mean_bp, '.4e')+ "\n" 
+                if self.set_interface() is not None:
+                    self.set_interface().sheet.message(texte)
                 wx.LogMessage(texte)
                 wx.LogMessage('Uncertainty  ' + format(2 * self.flux_audio.Fe/self.flux_audio.tfd_size, '.4e') + "Hz")
                 wx.LogMessage(40*'*')
@@ -709,6 +718,8 @@ class PlotNotebook(wx.Panel):
 
     def set_interface(self, interface=None):
         self.interface = interface
+        for page in self.page:
+            page.set_interface(interface)
 
     def add(self, name="plot", type_courbe='time'):
         """ Ajout d'un onglet au panel

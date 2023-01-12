@@ -14,7 +14,7 @@ import wx
 import wx.lib.agw.aui as aui
 import numpy as np
 import scipy.signal
-import fluxaudio
+import audio.fluxaudio
 
 
 
