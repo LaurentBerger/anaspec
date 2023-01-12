@@ -15,9 +15,10 @@ import sounddevice as sd
 import wx
 import wx.adv
 import wx.lib.agw.aui as aui
-import fluxaudio
-import fenetrecourbe as fc
-import generation_signal
+import audio.fluxaudio as fluxaudio
+import audio.fenetrecourbe as fc
+import audio.generation_signal as generation_signal
+
 
 MIN_TFD_SIZE = 256
 MIN_SPECTRO_SIZE = 256
