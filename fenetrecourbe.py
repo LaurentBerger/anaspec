@@ -424,7 +424,8 @@ class Plot(wx.Panel):
                                         arrowprops=dict(arrowstyle='<->'))
                 self.bp_line = self.graphique.hlines(self.mod_fft[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
                                                      colors='k')
-                self.bp_text = self.graphique.text((idx_sup  + idx_inf) * idx_freq / 2,self.mod_fft[idx]* bp_level,  texte)
+                texte = str(int(idx_inf * idx_freq)) + 'Hz <-> ' +  str(int(idx_sup * idx_freq)) + 'Hz'
+                self.bp_text = self.graphique.text(idx_inf * idx_freq,self.mod_fft[idx]* bp_level,  texte)
 
                 self.canvas.draw()
             if event.key == 'control' and self.type_courbe == 'dft_modulus':
