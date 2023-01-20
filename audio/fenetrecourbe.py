@@ -447,17 +447,20 @@ class Plot(wx.Panel):
                                                     distance=self.flux_audio.set_peak_distance())
                     nb_peak = 0
                     if len(pos_peak) != 0:
-                        wx.LogMessage("\tFrequency(Hz)\tAmplitude(u.a.)" )
+                        texte = "Frequency(Hz)\tAmplitude(u.a.)\n"
+                        wx.LogMessage("Frequency(Hz)\tAmplitude(u.a.)" )
                         for p in pos_peak:                   
                             if p > 0 and p < self.flux_audio.tfd_size // 2:
-                                texte = "\t" + str(self.flux_audio.get_format_precision(p * idx_freq)) + "\t" +\
-                                        format(self.mod_fft[p], '.4e')
-                                wx.LogMessage(texte)
+                                tmp_texte = str(self.flux_audio.get_format_precision(p * idx_freq)) + "\t" +\
+                                        format(self.mod_fft[p], '.4e') + "\n"
+                                wx.LogMessage(tmp_texte)
+                                texte = texte + tmp_texte
                                 nb_peak = nb_peak + 1
                                 if nb_peak>=100:
                                     wx.LogMessage("Number of peaks is greater than 100")
                                     wx.LogMessage("Stop iterating")
                                     break
+                        self.set_interface().sheet.message(texte)
                     if nb_peak <= 100:
                         pos = np.logical_and(pos_peak > 0, pos_peak < self.flux_audio.tfd_size // 2)
                         if self.peak_mark is not None:

@@ -13,9 +13,12 @@ class GridFrequency(wx.Frame):
 
         # We can set the sizes of individual rows and columns
         # in pixels
-
-
         self.Show()
+        self.Bind(wx.EVT_CLOSE, self.close_page)
+
+    def close_page(self, evt):
+        self.Show(False)
+        evt.Veto()
 
     def message(self, texte):
         ligne =  texte.split("\n")

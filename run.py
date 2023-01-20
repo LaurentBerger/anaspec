@@ -486,6 +486,11 @@ class InterfaceAnalyseur(wx.Panel):
             self.log = wx.LogWindow(None, "Oscilloscope Logger", show=True, passToOld=False)
         else:
             self.log.Show(True)
+        self.sheet =  audio.grid_frequency.GridFrequency(self)
+        if self.sheet is None:
+            self.sheet =  audio.grid_frequency.GridFrequency(self)
+        else:
+            self.sheet.Show(True)
 
     def close_page(self, evt):
         """
