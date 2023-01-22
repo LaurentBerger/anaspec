@@ -12,6 +12,7 @@ import numpy as np
 from scipy import signal
 
 import matplotlib.pyplot as plt
+import matplotlib.patches
 import matplotlib.backend_bases
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg\
@@ -144,6 +145,7 @@ class Plot(wx.Panel):
         self.figure, self.graphique = plt.subplots()
         self.lines = None
         self.lines_ref =  None
+        self.circle = None
         self.image = None
         self.bp_line = None
         self.bp_text = None
@@ -354,17 +356,43 @@ class Plot(wx.Panel):
         idx = np.argmin(np.abs(y - self.mod_fft[n_min + offset : n_max + offset]) / (y_max - y_min) +np.abs(x - self.val_x[n_min : n_max])/(idx_max-idx_min)) + n_min
         return idx + offset
 
+    def draw_circle(self, freq, amp):
+        bbox = self.graphique.get_window_extent().transformed(self.figure.dpi_scale_trans.inverted())
+        width, height = bbox.width * self.figure.dpi, bbox.height * self.figure.dpi
+        ratio_x = 16 / width
+        ratio_y = 16 / height
+        idx_min, idx_max = self.graphique.get_xlim()
+        y_min, y_max = self.graphique.get_ylim()
+        radius_x = (idx_max - idx_min) * ratio_x
+        radius_y = (y_max - y_min) * ratio_y
+        if self.circle is not None:
+            self.circle.remove()
+        self.circle = matplotlib.patches.Ellipse((freq, amp), radius_x, radius_y)
+        self.graphique.add_artist(self.circle)
+ 
+    def clear_circle(self):
+        if self.circle is not None:
+            self.circle.remove()
+        self.circle = None
+
+    def clear_peak(self):
+        if self.peak_mark is not None:
+            for line in self.peak_mark:
+                line.remove()
+            self.peak_mark = None
+ 
+    def clear_bp(self):
+        if self.bp_line is not None:
+            self.bp_line.remove()
+            self.bp_text.remove()
+            self.bp_arrw.remove()
+            self.bp_line = None
+ 
+
     def on_key(self, event):
         if event.key == 'delete':
-            if self.bp_line:
-                self.bp_line.remove()
-                self.bp_text.remove()
-                self.bp_arrw.remove()
-                self.bp_line = None
-            if self.peak_mark is not None:
-                for line in self.peak_mark:
-                    line.remove()
-                    self.peak_mark = None
+            self.clear_bp()
+            self.clear_peak()
             self.canvas.draw()
 
 
@@ -701,7 +729,7 @@ class Plot(wx.Panel):
             wx.LogError("Should not happen")
         return None
 
-class PlotNotebook(wx.Panel):
+class Oscilloscope(wx.Panel):
     def __init__(self, parent, flux_a, id_fen=-1, evt_type=None):
         wx.Panel.__init__(self, parent, id=id_fen)
         self.flux_audio = flux_a
@@ -709,7 +737,7 @@ class PlotNotebook(wx.Panel):
         self.note_book = aui.AuiNotebook(self)
         sizer = wx.BoxSizer()
         sizer.Add(self.note_book, 1, wx.EXPAND)
-        self.page = []
+        self.page = dict()
         self.evt_process = True
         self.SetSizer(sizer)
         self.parent = parent
@@ -721,18 +749,32 @@ class PlotNotebook(wx.Panel):
 
     def set_interface(self, interface=None):
         self.interface = interface
-        for page in self.page:
-            page.set_interface(interface)
+        for nom in self.page:
+            self.page[nom].set_interface(interface)
 
     def add(self, name="plot", type_courbe='time'):
         """ Ajout d'un onglet au panel
         """
+        if type_courbe in self.page.keys():
+            wx.MessageBox("Page already exist",
+                          "Error",
+                          wx.ICON_ERROR)
+            return None
         page = Plot(self.note_book, self.flux_audio, type_courbe=type_courbe)
-        self.page.append(page)
+        self.page[type_courbe] = page
         self.note_book.AddPage(page, name)
         self.note_book.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
 
         return page
+
+    def draw_circle(self, freq, amp):
+        self.page['dft_modulus'].draw_circle(freq, amp)
+        self.page['dft_modulus'].canvas.draw()
+
+
+    def clear_circle(self):
+        self.page['dft_modulus'].clear_circle()
+        self.page['dft_modulus'].canvas.draw()
 
     def draw_pages(self, _evt):
         """ tracé de la courbe associé à l'onglet
@@ -745,10 +787,10 @@ class PlotNotebook(wx.Panel):
         nb_data = self.flux_audio.new_sample()
         if nb_data > self.flux_audio.nb_ech_fenetre:
             self.page[0].nb_data = 0
-            for page in self.page:
-                if page.courbe_active:
-                    page.draw_page()
-                    page.canvas.draw()
+            for name in self.page:
+                if self.page[name].courbe_active:
+                    self.page[name].draw_page()
+                    self.page[name].canvas.draw()
         self.evt_process = True
 
     def new_gen_sig(self, evt):
@@ -756,11 +798,11 @@ class PlotNotebook(wx.Panel):
         Nouveau signal généré
         """
 
-        for page in self.page:
-            page.t_beg = evt.attr1
-            page.t_end = evt.attr2
-            page.maj_limite_slider()
-            page.init_axe()
+        for name in self.page:
+            self.page[name].t_beg = evt.attr1
+            self.page[name].t_end = evt.attr2
+            self.page[name].maj_limite_slider()
+            self.page[name].init_axe()
         self.evt_process = True
         if self.interface is not None:
             self.interface.maj_choix_freq()
@@ -768,57 +810,54 @@ class PlotNotebook(wx.Panel):
     def maj_palette(self, page_name, pal_name):
         """ changement de palette 
         """
-        for page in self.page:
-            if page.type_courbe == page_name:
-                page.palette = matplotlib.colormaps[pal_name]
-                if page_name == 'spectrogram':
-                    page.init_axe()
-                page.draw_page()
-                page.canvas.draw()
+        if page_name in self.page.keys():
+            self.page[page_name].palette = matplotlib.colormaps[pal_name]
+            if page_name == 'spectrogram':
+                self.page[page_name].init_axe()
+            self.page[page_name].draw_page()
+            self.page[page_name].canvas.draw()
 
     def maj_page(self, page_name):
         """ tracé de la courbe associé à l'onglet
         """
 
-        for page in self.page:
-            if page.courbe_active and page.type_courbe == page_name:
-                page.draw_page()
-                page.canvas.draw()
+        if page_name in self.page.keys():
+            if self.page[page_name].courbe_active:
+                self.page[page_name].draw_page()
+                self.page[page_name].canvas.draw()
 
     def get_t_beg(self, page_name):
-        for page in self.page:
-            if page.type_courbe == page_name:
-                return page.t_beg
+        if page_name in self.page.keys():
+            return self.page[page_name].t_beg
         return None
 
     def get_t_end(self, page_name):
-        for page in self.page:
-            if page.type_courbe == page_name:
-                return page.t_end
+        if page_name in self.page.keys():
+            return self.page[page_name].t_end
         return None        
 
     def set_t_beg(self, val):
-        for page in self.page:
-            page.set_t_beg(val)
+        for name in self.page:
+            self.page[name].set_t_beg(val)
         return None
 
     def set_t_end(self, val):
-        for page in self.page:
-            page.set_t_end(val)
+        for name in self.page:
+            self.page[name].set_t_end(val)
         return None        
 
     def set_t_max(self, val):
-        for page in self.page:
-            page.set_t_max(val)
+        for name in self.page:
+            self.page[name].set_t_max(val)
         return None        
 
     def maj_limite_slider(self):
-        for page in self.page:
-            page.maj_limite_slider()
+        for name in self.page:
+            self.page[name].maj_limite_slider()
 
     def draw_all_axis(self):
-        for page in self.page:
-            page.init_axe()
+        for name in self.page:
+            self.page[name].init_axe()
 
     def close_page(self, evt):
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)

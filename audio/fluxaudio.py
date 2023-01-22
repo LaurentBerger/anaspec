@@ -2,6 +2,7 @@ from ast import Try
 from pickle import NONE
 import queue
 import sys
+from warnings import catch_warnings
 
 import numpy as np
 import sounddevice as sd
@@ -214,6 +215,7 @@ class FluxAudio(Signal):
         nb_dig = int(self._mantisse) - int(self._decimale)
         if nb_dig <= 0:
             nb_dig = 1
+        nb_dig = nb_dig + 1
         self._format =  '.' + str(nb_dig) + 'e'
         return format(val, self._format)
 
@@ -265,12 +267,16 @@ class FluxAudio(Signal):
     def open_stream_in(self, device_idx):
         self.init_data_courbe()
         self.file_attente = queue.Queue()
-        self.stream_in = sd.InputStream(
+        try:
+            self.stream_in = sd.InputStream(
                device=device_idx, channels=self.nb_canaux,
                samplerate=self.Fe, callback=audio_callback)
-        self.nb_data = 0
-        self.stream_in.start()
-        return True
+            self.nb_data = 0
+            self.stream_in.start()
+            return True
+        except:
+            self.stream_in = None
+            return False
 
     def open_stream_out(self, device_idx):
         self.file_attente_out = queue.Queue()
