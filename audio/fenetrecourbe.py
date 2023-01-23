@@ -20,7 +20,8 @@ from matplotlib.backends.backend_wxagg import NavigationToolbar2WxAgg\
 
 import wx
 import wx.lib.newevent
-import wx.lib.agw.aui as aui
+import wx.aui as aui
+
 
 # pylint: disable=maybe-no-member
 EVENT_FFT = None
@@ -41,6 +42,27 @@ SLIDER_SPECTRO_END =8202
 BOUTON_COPY_SPECTRO = 8203
 BOUTON_COMPUTE_HZ = 8204
 
+def fast_atan2(y, x):
+    if type(y) is not np.ndarray:
+        y = np.array([y])
+    if type(x) is not np.ndarray:
+        x = np.array([x])
+    xx = np.abs(x)
+    yy = np.abs(y)
+    xy = np.array([xx,yy])
+    max_xy = np.max(xy, axis=0) 
+    idx = np.where(max_xy==0)
+    max_xy[idx]=1e-16
+    a = np.min(xy, axis=0) / max_xy
+    s = a * a
+    r = ((-0.0464964749 * s + 0.15931422) * s - 0.327622764) * s * a + a
+    idx = np.where(yy > xx)
+    r[idx] = 1.57079637 - r[idx]
+    idx = np.where(x < 0) 
+    r[idx]= 3.14159274 - r[idx]
+    idx = np.where(y < 0)
+    r[idx] = -r[idx]
+    return r
 
 
 
@@ -77,7 +99,6 @@ class CalculSpectrogram(threading.Thread):
         self.win_size_spectro = win_size_spectro
         self.overlap_spectro = overlap_spectro
         self.type_fenetre = fenetre
-        print("CalculSpectrogram ", self.type_fenetre)
     
     def run(self):
         _, _, self.z = signal.spectrogram(
@@ -85,7 +106,7 @@ class CalculSpectrogram(threading.Thread):
                 self.Fe,
                 nperseg=self.win_size_spectro,
                 noverlap=self.overlap_spectro,
-                window=tuple(self.type_fenetre))
+                window=tuple([self.type_fenetre]))
         evt = EVENT_SPECTRO(attr1="CalculSpectrogram", attr2=0)
         # Envoi de l'événement à la fenêtre chargée du tracé
         if PAGE_PLOT_SPECTRO:
@@ -635,12 +656,13 @@ class Plot(wx.Panel):
             tfd_size = self.flux_audio.set_tfd_size()
             self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0])
             self.phase_fft = np.angle(self.fft)
+            # self.phase_fft = fast_atan2(self.fft.imag, self.fft.real)
             self.init_axe_phase()
         elif self.type_courbe == 'dft_modulus':
             self.flux_audio.set_tfd_size(self.t_end - self.t_beg)
             tfd_size = self.flux_audio.set_tfd_size()
             if self.flux_audio.type_window[0] != 'boxcar':
-                w = signal.get_window(tuple(self.flux_audio.type_window),
+                w = signal.get_window(tuple([self.flux_audio.type_window]),
                                       self.t_end - self.t_beg)
                 self.fft = np.fft.fft(plotdata[self.t_beg:self.t_end, 0] * w)
             else:
@@ -675,7 +697,7 @@ class Plot(wx.Panel):
             for column, line in enumerate(self.lines):
                 line.set_ydata(plot_data[self.t_beg:self.t_end,column])
             return self.lines
-        if self.type_courbe == 'dft_modulus':
+        if self.type_courbe == 'dft_phase':
             pass
         if self.type_courbe == 'dft_modulus':
             if self.auto_adjust:
@@ -744,8 +766,16 @@ class Oscilloscope(wx.Panel):
         self.clock = time.perf_counter()
         self.Bind(evt_type[0], self.draw_pages)
         self.Bind(evt_type[1], self.new_gen_sig)
+        self.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CHANGED, self.init_axe)
         self.clock = 0
         self.interface = None
+
+    def init_axe(self, _):
+        idx_selec = self.note_book.GetSelection()
+        for name in self.page:
+            if self.page[name] == self.note_book.GetPage(idx_selec):
+                self.page[name].init_axe()
+
 
     def set_interface(self, interface=None):
         self.interface = interface
@@ -786,7 +816,7 @@ class Oscilloscope(wx.Panel):
         # self.clock = time.perf_counter()
         nb_data = self.flux_audio.new_sample()
         if nb_data > self.flux_audio.nb_ech_fenetre:
-            self.page[0].nb_data = 0
+            self.page['time'].nb_data = 0
             for name in self.page:
                 if self.page[name].courbe_active:
                     self.page[name].draw_page()
@@ -856,8 +886,10 @@ class Oscilloscope(wx.Panel):
             self.page[name].maj_limite_slider()
 
     def draw_all_axis(self):
+        idx_selec = self.note_book.GetSelection()
         for name in self.page:
-            self.page[name].init_axe()
+            if self.page[name] == self.note_book.GetPage(idx_selec):
+                self.page[name].init_axe()
 
     def close_page(self, evt):
         wx.MessageBox("Cannot be closed", "Warning", wx.ICON_WARNING)
