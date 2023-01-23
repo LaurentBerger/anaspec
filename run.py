@@ -201,7 +201,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.oscilloscope = None
         self.frame_gen_sig = None
         self.log = LogOscillo(self, "Oscilloscope Logger", show=False, passToOld=False)
-        self.sheet =  audio.grid_frequency.GridFrequency(self)
+        self.sheet =  audio.grid_frequency.GridFrequency(self, pos=(0,280))
 
         self.install_menu()
         self.parent.Show()

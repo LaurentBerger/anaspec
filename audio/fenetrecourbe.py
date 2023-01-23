@@ -454,6 +454,39 @@ class Plot(wx.Panel):
                     self.init_axe()
                     self.maj_limite_slider()
                     self.canvas.draw()
+            if event.key == 'shift+ctrl+shift' and self.type_courbe == 'dft_modulus':
+                idx = self.localise_freq(x, y)
+                n = 1
+                texte = "Frequency(Hz)\tAmplitude(u.a.)\tT.H.D.\n"
+                wx.LogMessage(texte)
+                pos_peak=[]
+                amp_peak=[]
+                thd = 0
+                v1 = 0
+                while n * idx < self.flux_audio.tfd_size//2:
+                    pos = np.argmax(self.mod_fft[n * idx - self.flux_audio.set_peak_distance() + 1:n * idx+self.flux_audio.set_peak_distance()]) + n*idx
+                    if n == 1:
+                        v1 = self.mod_fft[pos]
+                        if v1 == 0:
+                            wx.MessageBox("fondamental amplitude is zero. Leaving", "Warning", wx.ICON_WARNING)
+                            return
+                    else:
+                        thd = thd + self.mod_fft[pos]**2
+                    amp_peak.append(self.mod_fft[pos])
+                    pos_peak.append(pos)
+                    tmp_texte = str(self.flux_audio.get_format_precision(pos * idx_freq)) + "\t" +\
+                            format(self.mod_fft[pos], '.4e')+ "\t" +format(np.sqrt(thd)/v1, '.4e')  + "\n"
+                    wx.LogMessage(tmp_texte)
+                    texte = texte + tmp_texte
+                    n = n + 1
+                self.set_interface().sheet.message(texte)
+                if len(pos_peak) <= 100:
+                    if self.peak_mark is not None:
+                        for line in self.peak_mark:
+                            line.remove()
+                    self.peak_mark = self.graphique.plot(pos_peak, amp_peak, "o")
+                    self.canvas.draw()
+
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
                 bp_level, idx_inf, idx_sup, mean_bp, std_bp = self.computeBP(idx)

@@ -21,4 +21,8 @@ Spectrum  is plotted in  Oscilloscope window (Spectral Tab). It can be real time
 click and press shift key in spectral tab : give frequency and fft modulus
 click and press ctrl key in spectral tab : plot a cross around peak more than -x dB than clicked value 
 click and press alt key in spectral tab : plot bandwidth at level -x dB relative to clicked value 
-All numerical values are printed in window named Oscilloscope Logger
+click and press ctrl+shift key in spectral tab : total harmonic distorsion
+All numerical values are printed in window named Oscilloscope Logger and in grid Marker values (copy and paste values in your favorite spreadsheet is available) 
+
+You can fix space between peak in parameters (intervace window) tab using slider
+You can change level of bandpass in parameters (intervace window) tab using slider Bandwidth

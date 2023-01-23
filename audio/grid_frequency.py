@@ -2,8 +2,8 @@ import wx.grid
 
 
 class GridFrequency(wx.Frame):
-    def __init__(self, parent, nb_rows=100, nb_cols=10):
-        wx.Frame.__init__(self, parent,title="Marker values")
+    def __init__(self, parent,pos=(0,280), nb_rows=100, nb_cols=10):
+        wx.Frame.__init__(self, parent,title="Marker values", pos=pos, size=(660,520))
 
         # Create a wxGrid object
         self.grid = wx.grid.Grid(self, -1)
