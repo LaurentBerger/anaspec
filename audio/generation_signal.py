@@ -24,11 +24,19 @@ SLIDER_F0_CHIRP = 14003
 SLIDER_F1_CHIRP = 14004
 SLIDER_DUREE_CHIRP = 14005
 
-BOUTON_SAVE_SINUS = 15001
-BOUTON_PLAY_SINUS = 15002
-SLIDER_F0_SINUS = 15003
-SLIDER_DUREE_SINUS = 15005
-CASE_REFERENCE = 15006
+BOUTON_SAVE_SINUS_CUT = 15201
+BOUTON_PLAY_SINUS_CUT = 15202
+SLIDER_F0_SINUS_CUT = 15203
+SLIDER_DUREE_SINUS_CUT = 15205
+SLIDER_CUT_LEVEL = 15206
+CASE_REFERENCE_CUT = 15207
+
+
+BOUTON_SAVE_SINUS = 15301
+BOUTON_PLAY_SINUS = 15302
+SLIDER_F0_SINUS = 15303
+SLIDER_DUREE_SINUS = 15305
+CASE_REFERENCE = 15306
 
 BOUTON_SAVE_RAMP = 18001
 BOUTON_PLAY_RAMP = 18002
@@ -88,11 +96,14 @@ class InterfaceGeneration(wx.Panel):
         self._f0_t0 = 0
         self._f1_t1 = 440
         self._f0_sinus = 1000
+        self._f0_sinus_cut = 1000
         self._f0_square = 1000
         self._f0_gaussian = 1000
         self._ratio_square = 50
         self._ratio_gaussian = 50
+        self._sinus_cut_level =  100
         self.sinus_reference =  True
+        self.sinus_reference_cut = True
         self.ramp_reference =  True
         self.Fe = 22050
         self.t_ech = None
@@ -100,10 +111,12 @@ class InterfaceGeneration(wx.Panel):
         self._duree_ramp = 1000
         self._duree_chirp = 1000
         self._duree_sinus = 1000
+        self._duree_sinus_cut = 1000
         self._duree_square = 1000
         self._duree_gaussian = 1000
         self.methode = None
         self.choix_Fe_sinus = None
+        self.choix_Fe_sinus_cut = None
         self.choix_Fe_chirp =  None
         self.choix_Fe_gaussian =  None
         self.choix_Fe_square =  None
@@ -141,6 +154,11 @@ class InterfaceGeneration(wx.Panel):
             self._f0_sinus = f
         return self._f0_sinus
 
+    def f0_sinus_cut(self, f=None):
+        if f is not None:
+            self._f0_sinus_cut = f
+        return self._f0_sinus_cut
+
     def f0_gaussian(self, f=None):
         if f is not None:
             self._f0_gaussian = f
@@ -150,6 +168,11 @@ class InterfaceGeneration(wx.Panel):
         if f is not None:
             self._ratio_square = f
         return self._ratio_square
+
+    def sinus_cut_level(self, f=None):
+        if f is not None:
+            self._sinus_cut_level = f
+        return self._sinus_cut_level
 
     def ratio_gaussian(self, f=None):
         if f is not None:
@@ -170,6 +193,11 @@ class InterfaceGeneration(wx.Panel):
         if f is not None:
             self._duree_sinus = f
         return self._duree_sinus
+
+    def duree_sinus_cut(self, f=None):
+        if f is not None:
+            self._duree_sinus_cut = f
+        return self._duree_sinus_cut
 
     def duree_chirp(self, f=None):
         if f is not None:
@@ -217,6 +245,7 @@ class InterfaceGeneration(wx.Panel):
         self.dico_slider = {0: None}
         self.ind_page = 0
         self.ajouter_page_sinus()
+        self.ajouter_page_sinus_cut()
         self.ajouter_page_chirp()
         self.ajouter_page_square()
         self.ajouter_page_gaussian()
@@ -654,6 +683,152 @@ class InterfaceGeneration(wx.Panel):
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.maj_param_sinus()
+        self.ind_page = self.ind_page + 1
+
+    def maj_param_sinus_cut(self):
+        idx =  self.choix_Fe_sinus_cut.GetCurrentSelection()
+        self.Fe = float(self.choix_Fe_sinus_cut.GetString(idx))
+        self.t_ech = np.arange(0,self._duree_sinus_cut/1000,1/self.Fe)
+
+    def sinus_cut(self):
+        self.signal = np.sin(self.t_ech * 2 * np.pi * self.f0_sinus_cut())
+        idx = self.signal > self.sinus_cut_level()/100
+        self.signal[idx] = self.sinus_cut_level()/100
+        idx = self.signal < -self.sinus_cut_level()/100
+        self.signal[idx] = -self.sinus_cut_level()/100
+        if self.sinus_reference_cut == True:
+            self.signal = self.signal + np.sin(self.t_ech * 2 * np.pi * 1000)
+        self.signal *= self.amplitude
+        return True
+
+    def play_sinus_cut(self, event):
+        """
+        Jouer le sinus
+        """
+        self.maj_param_sinus_cut()
+        if self.sinus_cut():
+            self.play()
+        else:
+            wx.LogError(self.err_msg)
+
+    def save_sinus_cut(self, event):
+        """
+        sauvegarde du sinus
+        """
+        self.maj_param_sinu_cut()
+        if self.sinus_cut():
+            nom_fichier = "sinus_cut" + str(self.Fe) + "_"
+            nom_fichier = nom_fichier + str(self.duree_sinus_cut()) + "ms_"
+            nom_fichier = nom_fichier + str(self.f0_sinus_cut())
+            nom_fichier = nom_fichier + ".wav"
+            self.on_save(nom_fichier)
+        else:
+            wx.LogError(self.err_msg)
+
+    def maj_sinus_reference_cut(self, evt):
+        case = evt.GetEventObject()
+        if case.GetValue():
+            self.sinus_reference_cut = True
+        else:
+            self.sinus_reference_cut = False
+
+
+    def ajouter_page_sinus_cut(self, name="Truncated Sinus "):
+        """
+        création de l'onglet sinus tronqué
+        pour paramétrer un sinus de fréquence F0 et
+        de durée 
+        """
+        ctrl = []
+        page = wx.Panel(self.note_book)
+        font = wx.Font(12,
+                       wx.FONTFAMILY_DEFAULT,
+                       wx.FONTSTYLE_ITALIC,
+                       wx.FONTWEIGHT_BOLD)
+        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=20, hgap=20)
+        self.choix_Fe_sinus_cut = wx.Choice(page, choices=self.val_Fe)
+        self.choix_Fe_sinus_cut.SetSelection(3)
+        self.ajouter_gadget((self.choix_Fe_sinus_cut, 1), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="Sampling frequency (Hz)")
+
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_F0_SINUS_CUT,
+                           value=self.f0_sinus_cut(),
+                           minValue=0,
+                           maxValue=int(self.Fe//2),
+                           style=style_texte)
+        self.dico_slider[SLIDER_F0_SINUS_CUT] = self.f0_sinus_cut
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_F0_SINUS_CUT)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="Frequency  (Hz)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_DUREE_SINUS_CUT,
+                           value=self.duree_sinus_cut(),
+                           minValue=0,
+                           maxValue=10000,
+                           style=style_texte,
+                           name="Duration")
+        self.dico_slider[SLIDER_DUREE_SINUS_CUT] = self.duree_sinus_cut
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_DUREE_SINUS_CUT)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_CUT_LEVEL,
+                           value=self.sinus_cut_level(),
+                           minValue=0,
+                           maxValue=100,
+                           style=style_texte,
+                           name="Level")
+        self.dico_slider[SLIDER_CUT_LEVEL] = self.sinus_cut_level
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_CUT_LEVEL)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="Level (%)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        case = wx.CheckBox(page, -1, 'Add 1000Hz frequency reference')
+        case.SetValue(self.sinus_reference)
+        case.Bind(wx.EVT_CHECKBOX,
+                    self.maj_sinus_reference_cut,
+                    case,
+                    CASE_REFERENCE_CUT)
+
+        self.ajouter_gadget((case, 0), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
+
+        bouton = wx.Button(page, id=BOUTON_SAVE_SINUS_CUT)
+        bouton.SetLabel('Save')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.save_sinus_cut, bouton)
+        self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
+        bouton = wx.Button(page, id=BOUTON_PLAY_SINUS_CUT)
+        if self.flux is not None:
+            bouton.SetLabel('Update')
+        else:
+            bouton.SetLabel('Play')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.play_sinus_cut, bouton)
+        self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
+
+        page.SetSizerAndFit(ma_grille)
+        self.note_book.AddPage(page, name)
+        self.ctrl.append(ctrl)
+        self.maj_param_sinus_cut()
         self.ind_page = self.ind_page + 1
 
     def maj_param_square(self):

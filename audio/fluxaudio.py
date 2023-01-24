@@ -306,6 +306,10 @@ class FluxAudio(Signal):
 
     def update_signal_genere(self, son):
         nb_ech = son.shape[0]
+        attr1 = 0
+        attr2 = self.plotdata.shape[0]
+        if nb_ech != self.plotdata.shape[0]:
+            attr1 = -1
         self.init_data(nb_ech)
         if len(son.shape) == 1:
             self.plotdata[:,0] = son[:]
@@ -315,7 +319,7 @@ class FluxAudio(Signal):
                 wx.MessageBox("Channel number are not equal. First channel uses", "Warning", wx.ICON_WARNING)
             elif son.shape[1] == 2:
                 self.plotdata[self.plotdata.shape[0]-nb_ech:,1] += son[:nb_ech,1] 
-        evt = self.NEW_EVENT_GEN(attr1=0, attr2=nb_ech)
+        evt = self.NEW_EVENT_GEN(attr1=attr1, attr2=attr2)
         # Envoi de l'événement à la fenêtre chargée du tracé
         wx.PostEvent(FLUX_AUDIO.courbe, evt)
 

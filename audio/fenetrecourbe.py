@@ -454,71 +454,6 @@ class Plot(wx.Panel):
                     self.init_axe()
                     self.maj_limite_slider()
                     self.canvas.draw()
-            if event.key == 'shift+ctrl+shift' and self.type_courbe == 'dft_modulus':
-                idx = self.localise_freq(x, y)
-                n = 1
-                texte = "Frequency(Hz)\tAmplitude(u.a.)\tT.H.D.\n"
-                wx.LogMessage(texte)
-                pos_peak=[]
-                amp_peak=[]
-                thd = 0
-                v1 = 0
-                while n * idx < self.flux_audio.tfd_size//2:
-                    pos = np.argmax(self.mod_fft[n * idx - self.flux_audio.set_peak_distance() + 1:n * idx+self.flux_audio.set_peak_distance()]) + n*idx
-                    if n == 1:
-                        v1 = self.mod_fft[pos]
-                        if v1 == 0:
-                            wx.MessageBox("fondamental amplitude is zero. Leaving", "Warning", wx.ICON_WARNING)
-                            return
-                    else:
-                        thd = thd + self.mod_fft[pos]**2
-                    amp_peak.append(self.mod_fft[pos])
-                    pos_peak.append(pos)
-                    tmp_texte = str(self.flux_audio.get_format_precision(pos * idx_freq)) + "\t" +\
-                            format(self.mod_fft[pos], '.4e')+ "\t" +format(np.sqrt(thd)/v1, '.4e')  + "\n"
-                    wx.LogMessage(tmp_texte)
-                    texte = texte + tmp_texte
-                    n = n + 1
-                self.set_interface().sheet.message(texte)
-                if len(pos_peak) <= 100:
-                    if self.peak_mark is not None:
-                        for line in self.peak_mark:
-                            line.remove()
-                    self.peak_mark = self.graphique.plot(pos_peak, amp_peak, "o")
-                    self.canvas.draw()
-
-            if event.key == 'alt' and self.type_courbe == 'dft_modulus':
-                idx = self.localise_freq(x, y)
-                bp_level, idx_inf, idx_sup, mean_bp, std_bp = self.computeBP(idx)
-                texte = "Selected frequency(hz)\tModule( arb. unit)\tWidth at height( arb. unit)\tB(Hz)\tLow freq(Hz)\t High freq(Hz)\tMean( arb. unit)\tstd( arb. unit)\tstd/mean "
-                wx.LogMessage(texte)
-                texte = texte + "\n" + str(self.flux_audio.get_format_precision(idx  * idx_freq))
-                texte = texte + "\t" + format(self.mod_fft[idx], '.4e')
-                texte = texte + "\t" + format(self.mod_fft[idx] * bp_level, '.4e')
-                texte = texte + "\t" + self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq)
-                texte = texte + "\t" + str(idx_inf * idx_freq) + '\t' +  str(idx_sup * idx_freq) + '\t'
-                texte = texte + "\t" + format(mean_bp, '.4e') + '\t' + format(std_bp, '.4e') + "\t"
-                texte = texte + "\t" + format(std_bp/mean_bp, '.4e')+ "\n" 
-                if self.set_interface() is not None:
-                    self.set_interface().sheet.message(texte)
-                wx.LogMessage(texte)
-                wx.LogMessage('Uncertainty  ' + format(2 * self.flux_audio.Fe/self.flux_audio.tfd_size, '.4e') + "Hz")
-                wx.LogMessage(40*'*')
-                if self.bp_line:
-                    self.bp_line.remove()
-                    self.bp_text.remove()
-                    self.bp_arrw.remove()
-                self.bp_arrw = self.graphique.annotate(
-                                        '',
-                                        xy=(idx_inf * idx_freq, self.mod_fft[idx]* bp_level),
-                                        xytext=(idx_sup * idx_freq, self.mod_fft[idx]* bp_level),
-                                        arrowprops=dict(arrowstyle='<->'))
-                self.bp_line = self.graphique.hlines(self.mod_fft[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
-                                                     colors='k')
-                texte = str(int(idx_inf * idx_freq)) + 'Hz <-> ' +  str(int(idx_sup * idx_freq)) + 'Hz'
-                self.bp_text = self.graphique.text(idx_inf * idx_freq,self.mod_fft[idx]* bp_level,  texte)
-
-                self.canvas.draw()
             if event.key == 'control' and self.type_courbe == 'dft_modulus':
                 if self.flux_audio.plotdata is not None and self.mod_fft is not None:
                     idx = self.localise_freq(x, y)
@@ -545,12 +480,70 @@ class Plot(wx.Panel):
                         self.set_interface().sheet.message(texte)
                     if nb_peak <= 100:
                         pos = np.logical_and(pos_peak > 0, pos_peak < self.flux_audio.tfd_size // 2)
-                        if self.peak_mark is not None:
-                            for line in self.peak_mark:
-                                line.remove()
+                        self.clear_peak()
                         self.peak_mark = self.graphique.plot(pos_peak[pos] * idx_freq, self.mod_fft[pos_peak[pos]], "x")
                         self.canvas.draw()
                     wx.LogMessage(40*'*')
+            if event.key == 'shift+ctrl+shift' and self.type_courbe == 'dft_modulus':
+                idx = self.localise_freq(x, y)
+                n = 1
+                texte = "Frequency(Hz)\tAmplitude(u.a.)\tT.H.D.\n"
+                wx.LogMessage(texte)
+                pos_peak=[]
+                amp_peak=[]
+                thd = 0
+                v1 = 0
+                while n * idx < self.flux_audio.tfd_size//2:
+                    pos = np.argmax(self.mod_fft[n * idx - self.flux_audio.set_peak_distance() + 1:n * idx+self.flux_audio.set_peak_distance()]) \
+                          + n*idx - self.flux_audio.set_peak_distance() + 1
+                    if n == 1:
+                        v1 = self.mod_fft[pos]
+                        if v1 == 0:
+                            wx.MessageBox("fondamental amplitude is zero. Leaving", "Warning", wx.ICON_WARNING)
+                            return
+                    else:
+                        thd = thd + self.mod_fft[pos]**2
+                    amp_peak.append(self.mod_fft[pos])
+                    pos_peak.append(pos*idx_freq)
+                    tmp_texte = str(self.flux_audio.get_format_precision(pos * idx_freq)) + "\t" +\
+                            format(self.mod_fft[pos], '.4e')+ "\t" +format(np.sqrt(thd)/v1, '.4e')  + "\n"
+                    wx.LogMessage(tmp_texte)
+                    texte = texte + tmp_texte
+                    n = n + 1
+                self.set_interface().sheet.message(texte)
+                self.clear_peak()
+                self.peak_mark = self.graphique.plot(pos_peak, amp_peak, "o")
+                self.canvas.draw()
+
+            if event.key == 'alt' and self.type_courbe == 'dft_modulus':
+                idx = self.localise_freq(x, y)
+                bp_level, idx_inf, idx_sup, mean_bp, std_bp = self.computeBP(idx)
+                texte = "Selected frequency(hz)\tModule( arb. unit)\tWidth at height( arb. unit)\tB(Hz)\tLow freq(Hz)\t High freq(Hz)\tMean( arb. unit)\tstd( arb. unit)\tstd/mean "
+                wx.LogMessage(texte)
+                texte = texte + "\n" + str(self.flux_audio.get_format_precision(idx  * idx_freq))
+                texte = texte + "\t" + format(self.mod_fft[idx], '.4e')
+                texte = texte + "\t" + format(self.mod_fft[idx] * bp_level, '.4e')
+                texte = texte + "\t" + self.flux_audio.get_format_precision((idx_sup - idx_inf) * idx_freq)
+                texte = texte + "\t" + str(idx_inf * idx_freq) + '\t' +  str(idx_sup * idx_freq) + '\t'
+                texte = texte + "\t" + format(mean_bp, '.4e') + '\t' + format(std_bp, '.4e') + "\t"
+                texte = texte + "\t" + format(std_bp/mean_bp, '.4e')+ "\n" 
+                if self.set_interface() is not None:
+                    self.set_interface().sheet.message(texte)
+                wx.LogMessage(texte)
+                wx.LogMessage('Uncertainty  ' + format(2 * self.flux_audio.Fe/self.flux_audio.tfd_size, '.4e') + "Hz")
+                wx.LogMessage(40*'*')
+                self.clear_bp()
+                self.bp_arrw = self.graphique.annotate(
+                                        '',
+                                        xy=(idx_inf * idx_freq, self.mod_fft[idx]* bp_level),
+                                        xytext=(idx_sup * idx_freq, self.mod_fft[idx]* bp_level),
+                                        arrowprops=dict(arrowstyle='<->'))
+                self.bp_line = self.graphique.hlines(self.mod_fft[idx]* bp_level, idx_inf * idx_freq, idx_sup * idx_freq,
+                                                     colors='k')
+                texte = str(int(idx_inf * idx_freq)) + 'Hz <-> ' +  str(int(idx_sup * idx_freq)) + 'Hz'
+                self.bp_text = self.graphique.text(idx_inf * idx_freq,self.mod_fft[idx]* bp_level,  texte)
+
+                self.canvas.draw()
 
     def init_axe_time(self):
         plotdata = self.flux_audio.plotdata
@@ -861,11 +854,20 @@ class Oscilloscope(wx.Panel):
         Nouveau signal généré
         """
 
+        idx_selec = self.note_book.GetSelection()
         for name in self.page:
-            self.page[name].t_beg = evt.attr1
-            self.page[name].t_end = evt.attr2
+            if evt.attr1 != 0:
+                if self.page[name].t_end >= evt.attr2:
+                    self.page[name].t_end = self.flux_audio.taille_buffer_signal
+                    if self.page[name].t_beg != 0:
+                        self.page[name].t_beg = self.flux_audio.taille_buffer_signal - evt.attr2 + self.page[name].t_beg
+                        if self.page[name].t_beg <0:
+                            self.page[name].t_beg = 0
+                        elif self.page[name].t_beg >= self.page[name].t_end:
+                            self.page[name].t_beg = self.page[name].t_end - 1
             self.page[name].maj_limite_slider()
-            self.page[name].init_axe()
+            if self.page[name] == self.note_book.GetPage(idx_selec):
+                self.page[name].init_axe()
         self.evt_process = True
         if self.interface is not None:
             self.interface.maj_choix_freq()
