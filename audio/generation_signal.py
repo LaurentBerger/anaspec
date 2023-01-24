@@ -722,6 +722,7 @@ class InterfaceGeneration(wx.Panel):
         self.signal[idx] = self.sinus_cut_level()/100
         idx = self.signal < -self.sinus_cut_level()/100
         self.signal[idx] = -self.sinus_cut_level()/100
+        self.signal = self.signal / self.sinus_cut_level() * 100
         if self.sinus_reference_cut == True:
             self.signal = self.signal + np.sin(self.t_ech * 2 * np.pi * 1000)
         self.signal *= self.amplitude
