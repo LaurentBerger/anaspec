@@ -40,7 +40,7 @@ class GridFrequency(wx.Frame):
                     except ValueError:
                         self.oscilloscope.clear_circle()
                 else:
-                    self.oscilloscope.cLear_circle()
+                    self.oscilloscope.clear_circle()
         if evt.GetCol() != -1:
             self.grid.SetSelectionMode(wx.grid.Grid.GridSelectColumns)
             self.grid.SelectCol(evt.GetCol())

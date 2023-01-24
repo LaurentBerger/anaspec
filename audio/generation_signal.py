@@ -51,7 +51,13 @@ BOUTON_SAVE_SQUARE = 16001
 BOUTON_PLAY_SQUARE = 16002
 SLIDER_F0_SQUARE = 16003
 SLIDER_DUREE_SQUARE = 16005
-SLIDER_RAPPORT_CYCLIQUE_SQUARE = 6006
+SLIDER_RAPPORT_CYCLIQUE_SQUARE = 16006
+
+BOUTON_SAVE_SAWTOOTH = 16101
+BOUTON_PLAY_SAWTOOTH = 16102
+SLIDER_F0_SAWTOOTH = 16103
+SLIDER_DUREE_SAWTOOTH = 16105
+SLIDER_RAPPORT_CYCLIQUE_SAWTOOTH = 16106
 
 BOUTON_SAVE_GAUSSIAN = 17001
 BOUTON_PLAY_GAUSSIAN = 17002
@@ -98,8 +104,10 @@ class InterfaceGeneration(wx.Panel):
         self._f0_sinus = 1000
         self._f0_sinus_cut = 1000
         self._f0_square = 1000
+        self._f0_sawtooth = 1000
         self._f0_gaussian = 1000
         self._ratio_square = 50
+        self._ratio_sawtooth = 50
         self._ratio_gaussian = 50
         self._sinus_cut_level =  100
         self.sinus_reference =  True
@@ -109,6 +117,7 @@ class InterfaceGeneration(wx.Panel):
         self.t_ech = None
         self.dico_slider = {0: None}
         self._duree_ramp = 1000
+        self._duree_sawtooth = 1000
         self._duree_chirp = 1000
         self._duree_sinus = 1000
         self._duree_sinus_cut = 1000
@@ -120,6 +129,7 @@ class InterfaceGeneration(wx.Panel):
         self.choix_Fe_chirp =  None
         self.choix_Fe_gaussian =  None
         self.choix_Fe_square =  None
+        self.choix_Fe_sawtooth =  None
         self.signal = None
         self.flux = fa
         self.parent.Show()
@@ -189,6 +199,21 @@ class InterfaceGeneration(wx.Panel):
             self._duree_square = f
         return self._duree_square
 
+    def ratio_sawtooth(self, f=None):
+        if f is not None:
+            self._ratio_sawtooth = f
+        return self._ratio_sawtooth
+
+    def f0_sawtooth(self, f=None):
+        if f is not None:
+            self._f0_sawtooth = f
+        return self._f0_sawtooth
+
+    def duree_sawtooth(self, f=None):
+        if f is not None:
+            self._duree_sawtooth = f
+        return self._duree_sawtooth
+
     def duree_sinus(self, f=None):
         if f is not None:
             self._duree_sinus = f
@@ -248,6 +273,7 @@ class InterfaceGeneration(wx.Panel):
         self.ajouter_page_sinus_cut()
         self.ajouter_page_chirp()
         self.ajouter_page_square()
+        self.ajouter_page_sawtooth()
         self.ajouter_page_gaussian()
         self.ajouter_page_rampe()
         self.note_book.Bind(aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.close_page)
@@ -965,6 +991,130 @@ class InterfaceGeneration(wx.Panel):
         self.note_book.AddPage(page, name)
         self.ctrl.append(ctrl)
         self.maj_param_square()
+        self.ind_page = self.ind_page + 1
+
+    def maj_param_sawtooth(self):
+        idx =  self.choix_Fe_sawtooth.GetCurrentSelection()
+        self.Fe = int(float(self.choix_Fe_sawtooth.GetString(idx)))
+        self.t_ech = np.arange(0,self._duree_sawtooth/1000,1/self.Fe)
+
+    def signal_sawtooth(self):
+        self.signal = scipy.signal.sawtooth(self.t_ech * 2 * np.pi * self.f0_sawtooth(), self._ratio_sawtooth/100)
+        self.signal *= self.amplitude
+        return True
+
+    def save_sawtooth(self, event):
+        """
+        sauvegarde du signal carré
+        """
+        self.maj_param_square()
+        if self.signal_carre():
+            nom_fichier = "sawtooth_" + str(self.Fe) + "_"
+            nom_fichier = nom_fichier + str(self.duree_sawtooth()) + "ms_"
+            nom_fichier = nom_fichier + str(self.f0_sawtooth()) + "Hz_"
+            nom_fichier = nom_fichier + str(self.ratio_sawtooth()) 
+            nom_fichier = nom_fichier + ".wav"
+            self.on_save(nom_fichier)
+        else:
+            wx.LogError(self.err_msg)
+
+    def play_sawtooth(self, event):
+        """
+        Jouer le signal carré
+        """
+        self.maj_param_sawtooth()
+        if self.signal_sawtooth():
+            self.play()
+        else:
+            wx.LogError(self.err_msg)
+
+    def ajouter_page_sawtooth(self, name="Sawtooth"):
+        """
+        création de l'onglet sinus
+        pour paramétrer un sinus de fréquence F0 et
+        de durée 
+        """
+        ctrl = []
+        page = wx.Panel(self.note_book)
+        font = wx.Font(12,
+                       wx.FONTFAMILY_DEFAULT,
+                       wx.FONTSTYLE_ITALIC,
+                       wx.FONTWEIGHT_BOLD)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        self.choix_Fe_sawtooth = wx.Choice(page, choices=self.val_Fe)
+        self.choix_Fe_sawtooth.SetSelection(3)
+        self.ajouter_gadget((self.choix_Fe_sawtooth, 1), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="Sampling frequency (Hz)")
+
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_F0_SAWTOOTH,
+                           value=self.f0_sawtooth(),
+                           minValue=0,
+                           maxValue=int(self.Fe//2),
+                           style=style_texte)
+        self.dico_slider[SLIDER_F0_SAWTOOTH] = self.f0_sawtooth
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_F0_SAWTOOTH)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="Frequency  (Hz)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_DUREE_SAWTOOTH,
+                           value=self.duree_sawtooth(),
+                           minValue=0,
+                           maxValue=10000,
+                           style=style_texte,
+                           name="Duration")
+        self.dico_slider[SLIDER_DUREE_SAWTOOTH] = self.duree_sawtooth
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_DUREE_SAWTOOTH)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="Sampling duration (ms)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+
+        style_texte = wx.SL_HORIZONTAL | wx.SL_LABELS | wx.SL_MIN_MAX_LABELS
+        gadget = wx.Slider(page,
+                           id=SLIDER_RAPPORT_CYCLIQUE_SAWTOOTH,
+                           value=self.ratio_sawtooth(),
+                           minValue=0,
+                           maxValue=100,
+                           style=style_texte,
+                           name="Duration")
+        self.dico_slider[SLIDER_RAPPORT_CYCLIQUE_SAWTOOTH] = self.ratio_sawtooth
+        gadget.Bind(wx.EVT_SCROLL,
+                    self.change_slider,
+                    gadget,
+                    SLIDER_RAPPORT_CYCLIQUE_SAWTOOTH)
+        self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
+        st_texte = wx.StaticText(page, label="Duty cycle (%)")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+
+
+        bouton = wx.Button(page, id=BOUTON_SAVE_SAWTOOTH)
+        bouton.SetLabel('Save')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.save_sawtooth, bouton)
+        self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
+        bouton = wx.Button(page, id=BOUTON_PLAY_SQUARE)
+        if self.flux is not None:
+            bouton.SetLabel('Update')
+        else:
+            bouton.SetLabel('Play')
+        bouton.SetBackgroundColour(wx.Colour(0, 255, 0))
+        bouton.Bind(wx.EVT_BUTTON, self.play_sawtooth, bouton)
+        self.ajouter_gadget((bouton, 0), ctrl, ma_grille, font)
+        page.SetSizerAndFit(ma_grille)
+        self.note_book.AddPage(page, name)
+        self.ctrl.append(ctrl)
+        self.maj_param_sawtooth()
         self.ind_page = self.ind_page + 1
 
 

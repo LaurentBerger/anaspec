@@ -414,6 +414,7 @@ class Plot(wx.Panel):
         if event.key == 'delete':
             self.clear_bp()
             self.clear_peak()
+            self.clear_circle()
             self.canvas.draw()
 
 
