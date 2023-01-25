@@ -519,6 +519,7 @@ class Plot(wx.Panel):
             if event.key == 'alt' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
                 bp_level, idx_inf, idx_sup, mean_bp, std_bp = self.computeBP(idx)
+                # http://www.dspguide.com
                 texte = "Selected frequency(hz)\tModule( arb. unit)\tWidth at height( arb. unit)\tB(Hz)\tLow freq(Hz)\t High freq(Hz)\tMean( arb. unit)\tstd( arb. unit)\tCoefficient of variation(SNR=CV)"
                 wx.LogMessage(texte)
                 texte = texte + "\n" + str(self.flux_audio.get_format_precision(idx  * idx_freq))
