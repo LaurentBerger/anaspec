@@ -18,11 +18,12 @@ Spectrum  is plotted in  Oscilloscope window (Spectral Tab). It can be real time
 ![alt text](https://github.com/LaurentBerger/anaspec/blob/master/images/interface_spectrum.jpg)
 
 
-click and press shift key in spectral tab : give frequency and fft modulus
-click and press ctrl key in spectral tab : plot a cross around peak more than -x dB than clicked value 
-click and press alt key in spectral tab : plot bandwidth at level -x dB relative to clicked value 
-click and press ctrl+shift key in spectral tab : total harmonic distorsion
-All numerical values are printed in window named Oscilloscope Logger and in grid Marker values (copy and paste values in your favorite spreadsheet is available) 
+Selecting With the Keyboard and Mouse
 
-You can fix space between peak in parameters (intervace window) tab using slider
+    press shift key and click in spectral tab : give frequency and fft modulus click
+    press ctrl key  and click in spectral tab : plot a cross around peak more than -x dB than clicked value click
+    press alt key  and click in spectral tab : plot bandwidth at level -x dB relative to clicked value
+    press ctrl+shift key  and click in spectral tab : total harmonic distorsion All numerical values are printed in window named Oscilloscope Logger and in grid Marker values (copy and paste values in your favorite spreadsheet is available)
+
+You can fix space between peak in parameters (intervace window) tab using slider.
 You can change level of bandpass in parameters (intervace window) tab using slider Bandwidth

@@ -4,3 +4,4 @@ wxPython
 scipy
 sounddevice
 soundfile
+fmpeg-python

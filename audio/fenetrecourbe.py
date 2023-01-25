@@ -488,7 +488,7 @@ class Plot(wx.Panel):
             if event.key == 'shift+ctrl+shift' and self.type_courbe == 'dft_modulus':
                 idx = self.localise_freq(x, y)
                 n = 1
-                texte = "Frequency(Hz)\tAmplitude(u.a.)\tT.H.D.\n"
+                texte = "Frequency(Hz)\tAmplitude(u.a.)\tT.H.D.(F)\n"
                 wx.LogMessage(texte)
                 pos_peak=[]
                 amp_peak=[]

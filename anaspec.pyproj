@@ -34,6 +34,7 @@
     <Compile Include="audio\fluxaudio.py" />
     <Compile Include="audio\generation_signal.py" />
     <Compile Include="audio\grid_frequency.py" />
+    <Compile Include="audio\mp3_wav.py" />
     <Compile Include="run.py" />
   </ItemGroup>
   <ItemGroup>

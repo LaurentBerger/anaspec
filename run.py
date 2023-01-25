@@ -20,6 +20,7 @@ import audio.fluxaudio as fluxaudio
 import audio.fenetrecourbe as fc
 import audio.generation_signal as generation_signal
 import audio.grid_frequency
+import audio.mp3_wav
 import wx.lib.agw.pyprogress
 
 
@@ -49,7 +50,8 @@ ID_OPEN_REF = 1101
 ID_SIGGEN = 1102
 ID_ZEROPADDING = 1103
 ID_ZEROPADDING_CENTER = 1104
-ID_LOG = 1105
+ID_WAVMP3WAV = 1105
+ID_LOG = 1106
 ID_MARKER_VALUES = ID_LOG +1
 CHOICE_PALETTE = 3007
 
@@ -413,11 +415,14 @@ class InterfaceAnalyseur(wx.Panel):
         self.liste_periph_out = [self.menu_periph_out.AppendCheckItem(idx+300, x)
                                  for idx, x in enumerate(self.idmenu_audio_out)]
         barre_menu.Append(self.menu_periph_out, 'output device')
-        menu_about = wx.Menu()
-        _ = menu_about.Append(ID_ZEROPADDING, 'Zero padding', 'Zero padding')
-        _ = menu_about.Append(ID_ZEROPADDING_CENTER, 'Zero padding center', 'Zero padding center')
-        _ = menu_about.Append(ID_SIGGEN, 'Signal generators', 'Signal generators')
-        barre_menu.Append(menu_about, '&Tools')
+        menu_tool = wx.Menu()
+        _ = menu_tool.Append(ID_ZEROPADDING, 'Zero padding', 'Zero padding')
+        _ = menu_tool.Append(ID_ZEROPADDING_CENTER, 'Zero padding center', 'Zero padding center')
+        barre_menu.Append(menu_tool, '&Spectrum Tools')
+        menu_tool = wx.Menu()
+        _ = menu_tool.Append(ID_SIGGEN, 'Signal generators', 'Signal generators')
+        _ = menu_tool.Append(ID_WAVMP3WAV, 'Wav to Mp3 to Wav', 'Wav to Mp3 to Wav')
+        barre_menu.Append(menu_tool, '&Tools')
         menu_about = wx.Menu()
         _ = menu_about.Append(ID_LOG, 'Show log', 'Show log window')
         _ = menu_about.Append(ID_MARKER_VALUES, 'Show marker values', 'Show marker values')
@@ -428,6 +433,7 @@ class InterfaceAnalyseur(wx.Panel):
         self.parent.Bind(wx.EVT_CLOSE, self.close_page)
         self.parent.Bind(wx.EVT_MENU, self.about, id=wx.ID_ABOUT)
         self.parent.Bind(wx.EVT_MENU, self.generation_sig, id=ID_SIGGEN)
+        self.parent.Bind(wx.EVT_MENU, lambda evt: audio.mp3_wav.wav_mp3_wav(evt, self), id=ID_WAVMP3WAV)
         self.parent.Bind(wx.EVT_MENU, self.zero_padding, id=ID_ZEROPADDING)
         self.parent.Bind(wx.EVT_MENU, self.zero_padding, id=ID_ZEROPADDING_CENTER)
         self.parent.Bind(wx.EVT_MENU, self.show_log, id=ID_LOG)
@@ -447,7 +453,7 @@ class InterfaceAnalyseur(wx.Panel):
                wx.MessageBox("First choose peripherical in input device menu", "Error", wx.ICON_ERROR)
                return
         if self.frame_gen_sig is None:
-            self.frame_gen_sig = wx.Frame(None, -1, 'Signal generators', size=(770,400))
+            self.frame_gen_sig = wx.Frame(None, -1, 'Signal generators', pos=(0,280), size=(660,520))
             gen_sig = generation_signal.InterfaceGeneration(self.frame_gen_sig, fa=self.flux_audio)
             gen_sig.interface_generation_fct()
             self.frame_gen_sig.Bind(wx.EVT_CLOSE, self.hide_gen_sig)
