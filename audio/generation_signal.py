@@ -23,6 +23,7 @@ BOUTON_PLAY_CHIRP = 14002
 SLIDER_F0_CHIRP = 14003
 SLIDER_F1_CHIRP = 14004
 SLIDER_DUREE_CHIRP = 14005
+CASE_REFERENCE_CHIRP = 14006
 
 BOUTON_SAVE_SINUS_CUT = 15201
 BOUTON_PLAY_SINUS_CUT = 15202
@@ -110,6 +111,7 @@ class InterfaceGeneration(wx.Panel):
         self._ratio_sawtooth = 50
         self._ratio_gaussian = 50
         self._sinus_cut_level =  100
+        self.chirp_reference =  True
         self.sinus_reference =  True
         self.sinus_reference_cut = True
         self.ramp_reference =  True
@@ -336,6 +338,8 @@ class InterfaceGeneration(wx.Panel):
                                              self._duree_chirp/1000,
                                              self.f1_t1(),
                                              method=self.methode)
+            if self.chirp_reference is True:
+                self.signal = self.signal + np.sin(self.t_ech * 2 * np.pi * 1000)
             self.signal *= self.amplitude
             return True
         except ValueError as err:
@@ -367,6 +371,13 @@ class InterfaceGeneration(wx.Panel):
         else:
             wx.LogError(self.err_msg)
 
+    def maj_chirp_reference(self, evt):
+        case = evt.GetEventObject()
+        if case.GetValue():
+            self.chirp_reference = True
+        else:
+            self.chirp_reference = False
+
     def ajouter_page_chirp(self, name="Chirp"):
         """
         création de l'onglet Chirp
@@ -378,7 +389,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=7, cols=2, vgap=10, hgap=10)
         type_chirp = ['linear', 'quadratic', 'logarithmic', 'hyperbolic']
         self.choix_Fe_chirp = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_chirp.SetSelection(3)
@@ -441,6 +452,16 @@ class InterfaceGeneration(wx.Panel):
         self.ajouter_gadget((gadget, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP|wx.LEFT)
         st_texte = wx.StaticText(page, label="Sampling duration (ms)")
         self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font, wx.EXPAND|wx.TOP)
+        case = wx.CheckBox(page, -1, 'Add 1000Hz frequency reference')
+        case.SetValue(self.chirp_reference)
+        case.Bind(wx.EVT_CHECKBOX,
+                    self.maj_chirp_reference,
+                    case,
+                    CASE_REFERENCE_CHIRP)
+
+        self.ajouter_gadget((case, 0), ctrl, ma_grille, font)
+        st_texte = wx.StaticText(page, label="")
+        self.ajouter_gadget((st_texte, 0), ctrl, ma_grille, font)
 
         bouton = wx.Button(page, id=BOUTON_SAVE_CHIRP)
         bouton.SetLabel('Save')
@@ -509,7 +530,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=10, hgap=10)
         self.choix_Fe_gaussian = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_gaussian.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_gaussian, 1), ctrl, ma_grille, font)
@@ -642,7 +663,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=10, hgap=10)
         self.choix_Fe_sinus = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_sinus.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_sinus, 1), ctrl, ma_grille, font)
@@ -772,7 +793,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=6, cols=2, vgap=10, hgap=10)
         self.choix_Fe_sinus_cut = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_sinus_cut.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_sinus_cut, 1), ctrl, ma_grille, font)
@@ -917,7 +938,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=10, hgap=10)
         self.choix_Fe_square = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_square.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_square, 1), ctrl, ma_grille, font)
@@ -1041,7 +1062,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=5, cols=2, vgap=10, hgap=10)
         self.choix_Fe_sawtooth = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_sawtooth.SetSelection(3)
         self.ajouter_gadget((self.choix_Fe_sawtooth, 1), ctrl, ma_grille, font)
@@ -1222,7 +1243,7 @@ class InterfaceGeneration(wx.Panel):
                        wx.FONTFAMILY_DEFAULT,
                        wx.FONTSTYLE_ITALIC,
                        wx.FONTWEIGHT_BOLD)
-        ma_grille = wx.GridSizer(rows=8, cols=2, vgap=20, hgap=20)
+        ma_grille = wx.GridSizer(rows=8, cols=2, vgap=10, hgap=10)
         type_fct = ['sin', 'square', 'gausspulse', 'chirp']
         self.choix_Fe_ramp = wx.Choice(page, choices=self.val_Fe)
         self.choix_Fe_ramp.SetSelection(3)
