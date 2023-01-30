@@ -1270,10 +1270,12 @@ class InterfaceAnalyseur(wx.Panel):
 
                     with soundfile.SoundFile(pathname,
                                              mode='w',
-                                             samplerate=self.flux_audio.Fe,
+                                             samplerate=int(self.flux_audio.Fe),
                                              channels=self.flux_audio.nb_canaux,
                                              subtype='FLOAT') as fichier:
                         fichier.write(self.flux_audio.plotdata)
+                    wx.MessageBox("save as "+ pathname, "Warning", wx.ICON_WARNING)
+
                 except IOError:
                     wx.LogError("Cannot save current data in file '%s'." % pathname)        
 
