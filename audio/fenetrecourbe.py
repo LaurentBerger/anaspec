@@ -215,7 +215,7 @@ class Plot(wx.Panel):
                                     self.change_slider,
                                     self.slider_t_beg,
                                     self.id_slider_beg)
-            st_texte = wx.StaticText(self, label="begining index")
+            st_texte = wx.StaticText(self, label="beginning index")
             presentation_fenetre.Add(st_texte, 0, wx.CENTER)
             presentation_fenetre.Add(self.slider_t_beg, 0, wx.EXPAND)
         if self.id_slider_end is not None:
@@ -230,7 +230,7 @@ class Plot(wx.Panel):
                             self.change_slider,
                             self.slider_t_end,
                             self.id_slider_end)
-            st_texte = wx.StaticText(self, label="end index")
+            st_texte = wx.StaticText(self, label="ending index")
             presentation_fenetre.Add(st_texte, 0, wx.CENTER)
             presentation_fenetre.Add(self.slider_t_end, 0, wx.EXPAND)
         presentation_status = wx.BoxSizer(wx.HORIZONTAL)
